@@ -2155,6 +2155,72 @@ export class Canvas {
     this.dirty = false;
   };
 
+  /**
+   * 差异化 render 由于每次 render 都将整个页面擦除，当节点多了时，性能损耗大
+   * 像 move，resize，rotate 单个或多个节点时，没必要擦除整个画布
+   * TODO: 先不考虑 rotate
+   * @param oldRects 修改画笔的原 rect
+   * @param newRects 修改画笔的后 rect
+   */
+  diffRender(oldRects: Rect[], newRects: Rect[]) {
+    // 1. 计算实际需要擦除的 rect ；canvas 没有层的概念，需要计算出受干扰的 pens
+    const realPens = this.getDisturbPens(oldRects, newRects, []);
+    console.log('realPens', realPens);
+    // 2. 先后覆盖问题，所以 realPens 中的顺序需要与 store 中相同
+    const changedPens = this.orderPens(realPens);
+    // 3. 先擦除
+    const ctx = this.canvas.getContext('2d');
+    ctx.save();
+    ctx.translate(this.store.data.x, this.store.data.y);
+    // 3.1 oldRects 在 getDisturbPens 方法中已经计算出来了
+    for (const oldRect of oldRects) {
+      ctx.save();
+      ctx.translate(0.5,0.5);
+      ctx.clearRect(oldRect.x - 1, oldRect.y - 1, oldRect.width +2, oldRect.height+2);
+      ctx.restore();
+    }
+    // 3.2 重绘
+    for (const pen of changedPens) {
+      ctx.save();
+      ctx.strokeStyle = this.store.options.color;
+      renderPen(ctx, pen);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  orderPens(pens: Pen[]) {
+    const resPens = [];
+    for (const storePen of this.store.data.pens) {
+      if (pens.find(pen => pen === storePen)) {
+        resPens.push(storePen);
+      }
+    }
+    return resPens;
+  }
+
+  getDisturbPens(oldRects: Rect[], newRects: Rect[], lastPens: Pen[]): Pen[] {
+    const newPens = [...lastPens];
+    for (const pen of this.store.data.pens) {
+      for (const oldRect of oldRects) {
+        if (rectInRect(oldRect, pen.calculative.worldRect) && !newPens.find(newPen => newPen.id === pen.id)) {
+          newPens.push(pen);
+          oldRects.push(pen.calculative.worldRect);
+        }
+      }
+      for (const newRect of newRects) {
+        if (rectInRect(newRect, pen.calculative.worldRect) && !newPens.find(newPen => newPen.id === pen.id)) {
+          newPens.push(pen);
+          oldRects.push(pen.calculative.worldRect);
+        }
+      }
+    }
+    if (newPens.length === lastPens.length) {
+      return newPens;
+    } 
+    return this.getDisturbPens(oldRects, newRects, newPens);
+  }
+
   renderPens = () => {
     const ctx = this.offscreen.getContext('2d') as CanvasRenderingContext2D;
     ctx.save();
@@ -2821,6 +2887,8 @@ export class Canvas {
 
     translateRect(this.activeRect, x, y);
 
+    const oldRects = [];
+    const newRects = [];
     pens.forEach((pen) => {
       if (!pen.parentId && pen.type && pen.anchors.findIndex((pt) => pt.connectTo) > -1) {
         return;
@@ -2835,7 +2903,9 @@ export class Canvas {
         this.dirtyLines.add(pen);
         this.store.path2dMap.set(pen, globalStore.path2dDraws[pen.name](pen));
       } else {
+        oldRects.push(deepClone(pen.calculative.worldRect));
         translateRect(pen.calculative.worldRect, x, y);
+        newRects.push(deepClone(pen.calculative.worldRect));
         calcPenRect(pen);
         pen.calculative.x = pen.x;
         pen.calculative.y = pen.y;
@@ -2858,7 +2928,11 @@ export class Canvas {
       });
     }
 
-    this.render(Infinity);
+    console.log(oldRects, 'oldRects');
+    console.log(newRects, 'newRects');
+    
+    this.diffRender(oldRects, newRects);
+    // this.render(Infinity);
     this.tooltip.translate(x, y);
     this.store.emitter.emit('translatePens', pens);
 
