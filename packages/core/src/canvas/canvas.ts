@@ -2175,15 +2175,14 @@ export class Canvas {
     // 3.1 oldRects 在 getDisturbPens 方法中已经计算出来了
     for (const oldRect of oldRects) {
       ctx.save();
-      ctx.translate(0.5,0.5);
-      ctx.clearRect(oldRect.x - 1, oldRect.y - 1, oldRect.width +2, oldRect.height+2);
+      ctx.clearRect(oldRect.x , oldRect.y , oldRect.width+1, oldRect.height+1);
       ctx.restore();
     }
     // 3.2 重绘
     for (const pen of changedPens) {
       ctx.save();
       ctx.strokeStyle = this.store.options.color;
-      renderPen(ctx, pen);
+      // renderPen(ctx, pen);
       ctx.restore();
     }
     ctx.restore();
