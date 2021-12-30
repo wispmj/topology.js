@@ -395,3 +395,25 @@ export function calcRelativePoint(pt: Point, worldRect: Rect) {
   }
   return point;
 }
+
+
+/**
+ * 计算可视区域，即线宽是会影响到 实际的宽高的
+ * @param rect 世界坐标 rect
+ * @param lineWidth 线宽
+ * @param dpiRatio dpi
+ * @returns 
+ */
+export function calcEyeRect(rect: Rect, lineWidth: number, dpiRatio: number) {
+  const realRect: Rect = {
+    x: rect.x - dpiRatio * lineWidth / 2,
+    y: rect.y - dpiRatio * lineWidth / 2,
+    width: rect.width + lineWidth * dpiRatio,
+    height: rect.height + lineWidth * dpiRatio,
+    rotate: rect.rotate
+  };
+  calcCenter(realRect);
+  realRect.ex = realRect.x + realRect.width;
+  realRect.ey = realRect.y + realRect.height;
+  return realRect;
+}
