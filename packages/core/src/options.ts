@@ -73,7 +73,7 @@ export const defaultOptions: Options = {
   textBaseline: 'middle',
   color: '#222222',
   activeColor: '#1890ff',
-  hoverColor: '#1890ff',
+  hoverColor: '#ff7a45',
   anchorColor: '#fa541c',
   anchorRadius: 4,
   anchorBackground: '#fff',
@@ -88,7 +88,8 @@ export const defaultOptions: Options = {
   gridColor: '#e2e2e2',
   ruleColor: '#888888',
   drawingLineName: 'curve',
-  interval: 20,
+  interval: 30,
   animateInterval: 30,
   autoPolyline: true,
+  autoAnchor: true,
 };

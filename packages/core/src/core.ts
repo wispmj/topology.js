@@ -2,7 +2,18 @@ import { commonAnchors, commonPens } from './diagrams';
 import { EventType, Handler } from 'mitt';
 import { Canvas } from './canvas';
 import { Options } from './options';
-import { calcTextLines, facePen, getParent, LockState, Pen, PenType, renderPenRaw } from './pen';
+import {
+  calcTextDrawRect,
+  calcTextLines,
+  calcTextRect,
+  facePen,
+  getParent,
+  getWords,
+  LockState,
+  Pen,
+  PenType,
+  renderPenRaw,
+} from './pen';
 import { Point } from './point';
 import {
   clearStore,
@@ -46,6 +57,11 @@ export class Topology {
     this['facePen'] = facePen;
     this.initEventFns();
     this.store.emitter.on('*', this.onEvent);
+
+    this['getWords'] = getWords;
+    this['calcTextLines'] = calcTextLines;
+    this['calcTextRect'] = calcTextRect;
+    this['calcTextDrawRect'] = calcTextDrawRect;
   }
 
   get beforeAddPen() {
@@ -98,7 +114,8 @@ export class Topology {
     };
     this.events[EventAction.SetProps] = (pen: any, e: Event) => {
       const rect = this.getPenRect(pen);
-      this.updateValue(pen, {...rect,...e.value});
+      this.updateValue(pen, { ...rect, ...e.value });
+      this.store.emitter.emit('valueUpdate', pen);
     };
     this.events[EventAction.StartAnimate] = (pen: any, e: Event) => {
       if (e.value) {
@@ -244,11 +261,37 @@ export class Topology {
     }
 
     pen.lineName = lineName;
-    const from = pen.calculative.worldAnchors[0];
-    const to = pen.calculative.worldAnchors[pen.calculative.worldAnchors.length - 1];
+    const from: any = pen.calculative.worldAnchors[0];
+    const to: any = pen.calculative.worldAnchors[pen.calculative.worldAnchors.length - 1];
+    from.prev = undefined;
+    from.next = undefined;
+    to.prev = undefined;
+    to.next = undefined;
     pen.calculative.worldAnchors = [from, to];
     pen.calculative.activeAnchor = from;
     this.canvas[lineName](this.store, pen, to);
+    if (pen.lineName === 'curve') {
+      from.prev = {
+        penId: from.penId,
+        x: from.x - 50,
+        y: from.y,
+      };
+      from.next = {
+        penId: from.penId,
+        x: from.x + 50,
+        y: from.y,
+      };
+      to.prev = {
+        penId: to.penId,
+        x: to.x - 50,
+        y: to.y,
+      };
+      to.next = {
+        penId: to.penId,
+        x: to.x + 50,
+        y: to.y,
+      };
+    }
     pen.calculative.activeAnchor = undefined;
     this.canvas.initLineRect(pen);
     this.render(Infinity);
@@ -393,9 +436,12 @@ export class Topology {
     }
     pens.forEach((pen) => {
       pen.calculative.pause = undefined;
-      pen.calculative.start = 0;
+      pen.calculative.start = undefined;
       this.store.animates.delete(pen);
+      this.canvas.restoreNodeAnimate(pen);
     });
+    this.canvas.calcActiveRect();
+    this.render(Infinity);
   }
 
   calcAnimateDuration(pen: Pen) {
@@ -455,7 +501,7 @@ export class Topology {
       pen.width = childRect.width;
       pen.height = childRect.height;
       pen.locked = LockState.DisableMove;
-      pen.type = PenType.Node;
+      // pen.type = PenType.Node;
     });
     this.canvas.active([parent]);
     this.render();
@@ -496,8 +542,13 @@ export class Topology {
     this.canvas.inactive();
   }
 
-  delete(pens?: Pen[]) {
-    this.canvas.delete(pens);
+  /**
+   * 删除画笔
+   * @param pens 需要删除的画笔们
+   * @param delLock 是否删除已经锁住的画笔
+   */
+  delete(pens?: Pen[], delLock = false) {
+    this.canvas.delete(pens, undefined, delLock);
   }
 
   scale(scale: number, center = { x: 0, y: 0 }) {
@@ -666,8 +717,8 @@ export class Topology {
     this.canvas.pushHistory(action);
   }
 
-  showInput(pen: Pen) {
-    this.canvas.showInput(pen);
+  showInput(pen: Pen, rect?: Rect) {
+    this.canvas.showInput(pen, rect);
   }
 
   hideInput() {
@@ -689,7 +740,11 @@ export class Topology {
         this.onSizeUpdate();
         break;
       case 'enter':
+        e.pen && e.pen.onMouseEnter && e.pen.onMouseEnter(e.pen, this.canvas.mousePos);
+        this.store.data.locked && this.doEvent(e, eventName);
+        break;
       case 'leave':
+        e.pen && e.pen.onMouseLeave && e.pen.onMouseLeave(e.pen, this.canvas.mousePos);
         this.store.data.locked && this.doEvent(e, eventName);
         break;
       case 'active':
@@ -784,6 +839,9 @@ export class Topology {
       parent.children = [];
     }
     children.forEach((pen) => {
+      if (!pen.calculative) {
+        this.canvas.makePen(pen);
+      }
       if (pen.parentId) {
         const p = this.store.pens[pen.parentId];
         const i = p.children.findIndex((id) => id === pen.id);
@@ -893,35 +951,35 @@ export class Topology {
     };
   }
 
-  alignNodes(align: string, pens?: Pen[], rect?: Rect) {
-    !pens && (pens = this.store.data.pens);
-    !rect && (rect = this.getRect(pens));
+  alignNodes(align: string, pens: Pen[] = this.store.data.pens, rect?: Rect) {
+    !rect && (rect = this.getPenRect(this.getRect(pens)));
     const initPens = deepClone(pens); // 原 pens ，深拷贝一下
     for (const item of pens) {
       if (item.type === PenType.Line) {
         continue;
       }
+      const penRect = this.getPenRect(item);
       switch (align) {
         case 'left':
-          item.x = rect.x;
+          penRect.x = rect.x;
           break;
         case 'right':
-          item.x = rect.ex - item.width;
+          penRect.x = rect.x + rect.width - penRect.width;
           break;
         case 'top':
-          item.y = rect.y;
+          penRect.y = rect.y;
           break;
         case 'bottom':
-          item.y = rect.ey - item.height;
+          penRect.y = rect.y + rect.height - penRect.height;
           break;
         case 'center':
-          item.x = rect.center.x - item.width / 2;
+          penRect.x = rect.x + rect.width / 2 - penRect.width / 2;
           break;
         case 'middle':
-          item.y = rect.center.y - item.height / 2;
+          penRect.y = rect.y + rect.height / 2 - penRect.height / 2;
           break;
       }
-      this.setValue(item);
+      this.setValue({ ...item, ...penRect });
     }
     this.canvas.calcActiveRect();
     this.pushHistory({
@@ -937,18 +995,22 @@ export class Topology {
    * @param pens 节点们，默认全部的
    * @param distance 总的宽 or 高
    */
-  private spaceBetweenByDirection(direction: 'width' | 'height', pens?: Pen[], distance?: number) {
-    !pens && (pens = this.store.data.pens);
-    !distance && (distance = this.getRect(pens)[direction]);
+  private spaceBetweenByDirection(
+    direction: 'width' | 'height',
+    pens: Pen[] = this.store.data.pens,
+    distance?: number
+  ) {
+    !distance && (distance = this.getPenRect(this.getRect(pens))[direction]);
     // 过滤出 node 节点 pens
-    pens = pens.filter((item) => item.type !== PenType.Line);
+    pens = pens.filter((item) => !item.type && !item.parentId);
     if (pens.length <= 2) {
       return;
     }
     const initPens = deepClone(pens); // 原 pens ，深拷贝一下
     // 计算间距
     const allDistance = pens.reduce((distance: number, currentPen: Pen) => {
-      return distance + currentPen[direction];
+      const currentPenRect = this.getPenRect(currentPen);
+      return distance + currentPenRect[direction];
     }, 0);
     const space = (distance - allDistance) / (pens.length - 1);
 
@@ -960,11 +1022,13 @@ export class Topology {
       return a.y - b.y;
     });
 
-    let left = direction === 'width' ? pens[0].x : pens[0].y;
+    const pen0Rect = this.getPenRect(pens[0]);
+    let left = direction === 'width' ? pen0Rect.x : pen0Rect.y;
     for (const item of pens) {
-      direction === 'width' ? (item.x = left) : (item.y = left);
-      left += item[direction] + space;
-      this.setValue(item);
+      const penRect = this.getPenRect(item);
+      direction === 'width' ? (penRect.x = left) : (penRect.y = left);
+      left += penRect[direction] + space;
+      this.setValue({ ...item, ...penRect });
     }
     this.pushHistory({
       type: EditType.Update,
@@ -981,38 +1045,43 @@ export class Topology {
     this.spaceBetweenByDirection('height', pens, height);
   }
 
-  layout(pens?: Pen[], width?: number, space: number = 30) {
-    !pens && (pens = this.store.data.pens);
-    const rect = getRect(pens);
+  layout(pens: Pen[] = this.store.data.pens, width?: number, space: number = 30) {
+    const rect = this.getPenRect(getRect(pens));
     !width && (width = rect.width);
 
-    // 1. 拿到全部节点中最大的宽高
-    pens = pens.filter((item) => item.type !== PenType.Line);
+    // 1. 拿到全部节点中最大的高
+    pens = pens.filter((item) => !item.type && !item.parentId);
     const initPens = deepClone(pens); // 原 pens ，深拷贝一下
-    let maxWidth = 0,
-      maxHeight = 0;
+    let maxHeight = 0;
 
     pens.forEach((pen: Pen) => {
-      pen.width > maxWidth && (maxWidth = pen.width);
-      pen.height > maxHeight && (maxHeight = pen.height);
+      const penRect = this.getPenRect(pen);
+      penRect.height > maxHeight && (maxHeight = penRect.height);
     });
 
     // 2. 遍历节点调整位置
-    let center = { x: rect.x + maxWidth / 2, y: rect.y + maxHeight / 2 };
-    pens.forEach((pen: Pen) => {
-      pen.x = center.x - pen.width / 2;
-      pen.y = center.y - pen.height / 2;
-      const currentWidth = center.x + maxWidth / 2 - rect.x;
-      if (width - currentWidth >= maxWidth + space)
+    let currentX = rect.x;
+    let currentY = rect.y;
+    pens.forEach((pen: Pen, index: number) => {
+      const penRect = this.getPenRect(pen);
+      penRect.x = currentX;
+      penRect.y = currentY + maxHeight / 2 - penRect.height / 2;
+
+      this.setValue({ ...pen, ...penRect });
+
+      if (index === pens.length - 1) {
+        return;
+      }
+      const currentWidth = currentX + penRect.width - rect.x;
+      const nextPenRect = this.getPenRect(pens[index + 1]);
+      if (Math.round(width - currentWidth) >= Math.round(nextPenRect.width + space))
         // 当前行
-        center.x = center.x + maxWidth + space;
+        currentX += penRect.width + space;
       else {
         // 换行
-        center.x = rect.x + maxWidth / 2;
-        center.y = center.y + maxHeight + space;
+        currentX = rect.x;
+        currentY += maxHeight + space;
       }
-
-      this.setValue(pen);
     });
     this.pushHistory({
       type: EditType.Update,
@@ -1293,7 +1362,8 @@ export class Topology {
       if (pen === parent || pen.parentId === parent.id) {
         return;
       }
-      if (pen.parentId) { // 已经是其它节点的子节点，x,y,w,h 已经是百分比了
+      if (pen.parentId) {
+        // 已经是其它节点的子节点，x,y,w,h 已经是百分比了
         return;
       }
       parent.children.push(pen.id);
@@ -1304,7 +1374,7 @@ export class Topology {
       pen.width = childRect.width;
       pen.height = childRect.height;
       pen.locked = LockState.DisableMove;
-      pen.type = PenType.Node;
+      // pen.type = PenType.Node;
     });
 
     return deepClone(pens);

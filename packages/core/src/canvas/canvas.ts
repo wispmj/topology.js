@@ -32,6 +32,9 @@ import {
   getPensLock,
   getToAnchor,
   getFromAnchor,
+  calcPadding,
+  getPensDisableRotate,
+  getPensDisableResize,
 } from '../pen';
 import {
   calcRotate,
@@ -113,14 +116,16 @@ export class Canvas {
   prevAnchor: Point;
   nextAnchor: Point;
 
-  lastMouseTime = 0;
+  private lastMouseTime = 0;
+  // 即将取消活动状态的画笔，用于Ctrl选中/取消选中画笔
+  private willInactivePen: Pen;
 
   dirty = false;
   lastRender = 0;
   touchStart = 0;
   timer: any;
 
-  lastAnimateRender = 0;
+  private lastAnimateRender = 0;
   animateRendering = false;
   renderTimer: any;
 
@@ -146,8 +151,8 @@ export class Canvas {
   magnifier: boolean;
   mousePos: Point = { x: 0, y: 0 };
   magnifierSize = 300;
-  // true 已经复制
-  private alreadyCopy: boolean = false;
+
+  private alreadyCopy = false;
 
   scroll: Scroll;
 
@@ -531,7 +536,7 @@ export class Canvas {
     // 计算区域
     for (const pen of pens) {
       // 组合节点才需要提前计算
-      (Array.isArray(pen.children) && pen.children.length > 0) && this.dirtyPenRect(pen);
+      Array.isArray(pen.children) && pen.children.length > 0 && this.dirtyPenRect(pen);
     }
     for (const pen of pens) {
       if (!pen.parentId) {
@@ -542,7 +547,7 @@ export class Canvas {
       }
     }
     this.addPens(pens);
-    this.active(pens.filter(pen => !pen.parentId));
+    this.active(pens.filter((pen) => !pen.parentId));
     this.render();
   }
 
@@ -601,7 +606,7 @@ export class Canvas {
   ontouchmove = (event: any) => {
     event.stopPropagation();
 
-    const touches = event.changedTouches;
+    const touches = event.touches;
     const len = touches.length;
     if (!this.touchCenter && len > 1) {
       this.touchCenter = {
@@ -616,8 +621,8 @@ export class Canvas {
     }
     this.touchStart = now;
 
-    const x = event.changedTouches[0].pageX - (window ? window.scrollX : 0);
-    const y = event.changedTouches[0].pageY - (window ? window.scrollY : 0);
+    const x = event.touches[0].pageX - (window ? window.scrollX : 0);
+    const y = event.touches[0].pageY - (window ? window.scrollY : 0);
     if (len > 1) {
       if (len === 2) {
         if (now - this.touchStart < 200) {
@@ -654,6 +659,7 @@ export class Canvas {
 
   ontouchend = (event: any) => {
     this.touches = undefined;
+    this.touchCenter = undefined;
 
     const x = event.changedTouches[0].pageX - (window ? window.scrollX : 0);
     const y = event.changedTouches[0].pageY - (window ? window.scrollY : 0);
@@ -748,12 +754,36 @@ export class Canvas {
       }
 
       if (this.hoverType === HoverType.Node) {
+        let newline = false;
         if (this.store.options.autoAnchor) {
+          if (!this.drawingLine) {
+            this.drawingLine = {
+              id: s8(),
+              name: 'line',
+              lineName: this.drawingLineName,
+              x: pt.x,
+              y: pt.y,
+              type: PenType.Line,
+              calculative: {
+                canvas: this,
+                active: true,
+                worldAnchors: [pt],
+                lineWidth: this.store.data.lineWidth || 1,
+              },
+              fromArrow: this.store.data.fromArrow || this.store.options.fromArrow,
+              toArrow: this.store.data.toArrow || this.store.options.toArrow,
+              lineWidth: this.store.data.lineWidth || 1,
+            };
+            newline = true;
+          }
           this.store.hoverAnchor = nearestAnchor(this.store.hover, this.drawingLine.calculative.worldAnchors[0]);
           this.drawingLine.autoTo = true;
+          pt.connectTo = this.store.hover.id;
+          pt.anchorId = this.store.hoverAnchor.id;
+          connectLine(this.store.pens[this.store.hover.id], this.drawingLine.id, pt.id, this.store.hoverAnchor.id);
         }
 
-        if (this.store.hoverAnchor) {
+        if (!newline && this.store.hoverAnchor) {
           if (this.drawingLine) {
             const to = this.drawingLine.calculative.worldAnchors[this.drawingLine.calculative.worldAnchors.length - 1];
             to.x = this.store.hoverAnchor.x;
@@ -845,19 +875,17 @@ export class Canvas {
             const pen = getParent(this.store.hover, true) || this.store.hover;
             if (e.ctrlKey) {
               if (pen.calculative.active) {
-                pen.calculative.active = undefined;
-                this.store.active.splice(
-                  this.store.active.findIndex((p) => p === pen),
-                  1
-                );
-                this.store.emitter.emit('inactive', [pen]);
+                this.willInactivePen = pen;
               } else {
                 pen.calculative.active = true;
                 this.store.active.push(pen);
                 this.store.emitter.emit('active', this.store.active);
               }
               this.dirty = true;
-            } else if (e.altKey) {
+            } else if (
+              this.store.hover.parentId &&
+              (!this.store.hover.locked || this.store.hover.locked < LockState.DisableMove)
+            ) {
               if (this.store.active.length) {
                 this.store.active.forEach((pen) => {
                   pen.calculative.active = undefined;
@@ -1061,14 +1089,21 @@ export class Canvas {
 
       // Move
       if (this.hoverType === HoverType.Node || this.hoverType === HoverType.Line) {
-        this.store.hover?.onMouseMove && this.store.hover.onMouseMove(this.store.hover, this.mousePos);
-
         // TODO: 选中状态 ctrl 点击会失去焦点，不会执行到这里的复制操作
         if (!this.store.data.locked && e.ctrlKey && !this.alreadyCopy) {
           this.alreadyCopy = true;
+          this.willInactivePen = undefined;
           this.copy();
           this.paste();
           return;
+        }
+        if (this.store.active.length === 1) {
+          if (
+            this.store.data.locked === LockState.DisableMove ||
+            this.store.active[0].locked === LockState.DisableMove
+          ) {
+            this.store.active[0]?.onMouseMove && this.store.active[0].onMouseMove(this.store.active[0], this.mousePos);
+          }
         }
         this.movePens(e);
         return;
@@ -1107,13 +1142,13 @@ export class Canvas {
     this.render();
   };
 
-  private hoverTimer: any;
+  private hoverTimer: number = 0;
   willGetHover(e) {
-    this.hoverTimer && clearTimeout(this.hoverTimer);
-    this.hoverTimer = setTimeout(() => {
+    const now = performance.now();
+    if (now - this.hoverTimer > 100) {
+      this.hoverTimer = now;
       this.getHover(e);
-      this.render();
-    }, 10);
+    }
   }
 
   onMouseUp = (e: {
@@ -1161,7 +1196,11 @@ export class Canvas {
       return;
     }
 
-    if (this.drawingLine && this.hoverType === HoverType.Node) {
+    if (
+      this.drawingLine &&
+      this.hoverType === HoverType.Node &&
+      this.store.hover.id !== this.drawingLine.calculative.worldAnchors[0].connectTo
+    ) {
       if (this.store.options.autoAnchor) {
         this.store.hoverAnchor = nearestAnchor(this.store.hover, this.drawingLine.calculative.worldAnchors[0]);
         this.drawingLine.autoTo = true;
@@ -1224,7 +1263,9 @@ export class Canvas {
 
     // Add pen
     if (this.addCaches) {
-      this.dropPens(this.addCaches, e);
+      if (!this.store.data.locked) {
+        this.dropPens(this.addCaches, e);
+      }
       this.addCaches = undefined;
     }
 
@@ -1246,7 +1287,7 @@ export class Canvas {
     if (this.dragRect) {
       const pens = this.store.data.pens.filter((pen) => {
         return (
-          pen.visible !== false &&
+          pen.visible != false &&
           pen.locked !== LockState.Disable &&
           !pen.parentId &&
           rectInRect(pen.calculative.worldRect, this.dragRect, this.store.options.dragAllIn)
@@ -1274,6 +1315,18 @@ export class Canvas {
           pen: this.store.hover,
         });
       }
+    }
+
+    if (this.willInactivePen) {
+      this.willInactivePen.calculative.active = undefined;
+      this.store.active.splice(
+        this.store.active.findIndex((p) => p === this.willInactivePen),
+        1
+      );
+      this.calcActiveRect();
+      this.willInactivePen = undefined;
+      this.store.emitter.emit('inactive', [this.willInactivePen]);
+      this.render(Infinity);
     }
 
     this.mouseDown = undefined;
@@ -1381,7 +1434,9 @@ export class Canvas {
     const activeLine = this.store.active.length === 1 && this.store.active[0].type;
     if (!this.drawingLineName && this.activeRect && !activeLine && !this.store.data.locked) {
       const activePensLock = getPensLock(this.store.active);
-      if (!this.store.options.disableRotate && !activePensLock) {
+      const activePensDisableRotate = getPensDisableRotate(this.store.active);
+      const activePensDisableResize = getPensDisableResize(this.store.active);
+      if (!this.store.options.disableRotate && !activePensLock && !activePensDisableRotate) {
         const rotatePt = {
           x: this.activeRect.center.x,
           y: this.activeRect.y - 30,
@@ -1397,9 +1452,8 @@ export class Canvas {
       }
 
       // 大小控制点
-      if (!this.hotkeyType || this.hotkeyType === HotkeyType.Resize) {
+      if ((!this.hotkeyType || this.hotkeyType === HotkeyType.Resize) && !activePensLock && !activePensDisableResize) {
         for (let i = 0; i < 4; i++) {
-          if (activePensLock) break;
           if (hitPoint(pt, this.sizeCPs[i], this.pointSize)) {
             let cursors = defaultCursors;
             let offset = 0;
@@ -1416,7 +1470,7 @@ export class Canvas {
           }
         }
       }
-      if (this.hotkeyType === HotkeyType.Resize) {
+      if (this.hotkeyType === HotkeyType.Resize && !activePensLock && !activePensDisableResize) {
         for (let i = 4; i < 8; i++) {
           if (hitPoint(pt, this.sizeCPs[i], this.pointSize)) {
             let cursors = rotatedCursors;
@@ -1460,6 +1514,7 @@ export class Canvas {
     if (this.store.lastHover !== this.store.hover) {
       this.dirty = true;
       if (this.store.lastHover) {
+        this.store.lastHover.calculative.hover = false;
         setHover(getParent(this.store.lastHover, true) || this.store.lastHover, false);
         this.store.emitter.emit('leave', this.store.lastHover);
         this.tooltip.hide();
@@ -1472,6 +1527,8 @@ export class Canvas {
       }
       this.store.lastHover = this.store.hover;
     }
+
+    this.store.hover?.onMouseMove && this.store.hover.onMouseMove(this.store.hover, this.mousePos);
   };
 
   private inPens = (pt: Point, pens: Pen[]) => {
@@ -1486,11 +1543,15 @@ export class Canvas {
       if (pen.lineWidth) {
         r += pen.lineWidth / 2;
       }
-      if (!pen.calculative.active && !pointInSimpleRect(pt, pen.calculative.worldRect, r)) {
+      if (
+        !pen.calculative.active &&
+        !pointInSimpleRect(pt, pen.calculative.worldRect, r) &&
+        !pointInRect(pt, pen.calculative.worldRect)
+      ) {
         continue;
       }
       // 锚点
-      if (!this.store.data.locked && !this.store.options.disableAnchor && this.hotkeyType !== HotkeyType.Resize) {
+      if (!this.store.data.locked && this.hotkeyType !== HotkeyType.Resize) {
         if (pen.calculative.worldAnchors) {
           for (const anchor of pen.calculative.worldAnchors) {
             hoverType = this.inAnchor(pt, pen, anchor);
@@ -1577,7 +1638,7 @@ export class Canvas {
 
       this.store.hover = pen;
       // 锚点
-      if (!this.store.options.disableAnchor && this.hotkeyType !== HotkeyType.Resize) {
+      if (this.hotkeyType !== HotkeyType.Resize) {
         if (pen.calculative.worldAnchors) {
           for (const anchor of pen.calculative.worldAnchors) {
             hoverType = this.inAnchor(pt, pen, anchor);
@@ -1881,8 +1942,18 @@ export class Canvas {
       pen.width = rect.width;
       pen.height = rect.height;
     }
+    if (!pen.fontSize) {
+      pen.fontSize = 12;
+      pen.calculative.fontSize = pen.fontSize * this.store.data.scale;
+    }
+    if (!pen.lineHeight) {
+      pen.lineHeight = 1.5;
+      pen.calculative.lineHeight = pen.lineHeight;
+    }
     calcCenter(rect);
     pen.calculative.worldRect = rect;
+    calcPadding(pen, rect);
+    calcTextRect(pen);
     this.store.path2dMap.set(pen, globalStore.path2dDraws[pen.name](pen));
     if (pen.calculative.worldAnchors) {
       pen.anchors = [];
@@ -2073,6 +2144,9 @@ export class Canvas {
     if (!playingAnimate) {
       pen.calculative.lineWidth = pen.lineWidth * scale;
       pen.calculative.fontSize = pen.fontSize * scale;
+      if (pen.fontSize < 1) {
+        pen.calculative.fontSize = pen.fontSize * pen.calculative.worldRect.height;
+      }
       pen.calculative.iconSize = pen.iconSize * scale;
       pen.calculative.iconWidth = pen.iconWidth * scale;
       pen.calculative.iconHeight = pen.iconHeight * scale;
@@ -2122,6 +2196,7 @@ export class Canvas {
         cancelAnimationFrame(this.renderTimer);
       }
       this.renderTimer = requestAnimationFrame(this.render);
+
       return;
     }
     this.renderTimer = undefined;
@@ -2223,7 +2298,7 @@ export class Canvas {
   renderPens = () => {
     const ctx = this.offscreen.getContext('2d') as CanvasRenderingContext2D;
     ctx.save();
-    ctx.strokeStyle = this.store.options.color;
+    ctx.strokeStyle = this.store.data.color || this.store.options.color;
     const canvasRect = {
       x: 0,
       y: 0,
@@ -2234,18 +2309,20 @@ export class Canvas {
     };
 
     for (const pen of this.store.data.pens) {
-      if (pen.visible === false || pen.calculative.visible === false) {
+      if (pen.visible == false || pen.calculative.visible == false) {
         pen.calculative.inView = false;
         continue;
       }
 
       const x = pen.calculative.worldRect.x + this.store.data.x;
       const y = pen.calculative.worldRect.y + this.store.data.y;
-      const penRect = {
+      const penRect: Rect = {
         x,
         y,
         ex: x + pen.calculative.worldRect.width,
         ey: y + pen.calculative.worldRect.height,
+        rotate: pen.calculative.worldRect.rotate,
+        center: pen.calculative.worldRect.center,
       };
       if (!rectInRect(penRect, canvasRect)) {
         pen.calculative.inView = false;
@@ -2283,11 +2360,11 @@ export class Canvas {
         ctx.strokeRect(this.activeRect.x, this.activeRect.y, this.activeRect.width, this.activeRect.height);
 
         ctx.globalAlpha = 1;
-        if (getPensLock(this.store.active)) {
+        if (getPensLock(this.store.active) || getPensDisableRotate(this.store.active)) {
           ctx.restore();
           return;
         }
-        // Draw rotate control point.
+        // Draw rotate control line.
         ctx.beginPath();
         ctx.moveTo(this.activeRect.center.x, this.activeRect.y);
         ctx.lineTo(this.activeRect.center.x, this.activeRect.y - 30);
@@ -2320,51 +2397,49 @@ export class Canvas {
         this.store.active.length !== 1 ||
         this.store.active[0] !== this.store.hover)
     ) {
-      if (!this.store.options.disableAnchor && !this.store.hover.disableAnchor) {
-        const anchors = [...this.store.hover.calculative.worldAnchors];
+      const anchors = [...this.store.hover.calculative.worldAnchors];
 
-        if (this.store.pointAt && this.hotkeyType === HotkeyType.AddAnchor) {
-          anchors.push(this.store.pointAt);
-        }
-        if (anchors) {
-          ctx.strokeStyle = this.store.hover.anchorColor || this.store.options.anchorColor;
-          ctx.fillStyle = this.store.hover.anchorBackground || this.store.options.anchorBackground;
-          anchors.forEach((anchor) => {
-            if (anchor === this.store.hoverAnchor) {
-              ctx.save();
-              ctx.fillStyle = ctx.strokeStyle;
+      if (this.store.pointAt && this.hotkeyType === HotkeyType.AddAnchor) {
+        anchors.push(this.store.pointAt);
+      }
+      if (anchors) {
+        ctx.strokeStyle = this.store.hover.anchorColor || this.store.options.anchorColor;
+        ctx.fillStyle = this.store.hover.anchorBackground || this.store.options.anchorBackground;
+        anchors.forEach((anchor) => {
+          if (anchor === this.store.hoverAnchor) {
+            ctx.save();
+            ctx.fillStyle = ctx.strokeStyle;
+          }
+          ctx.beginPath();
+          let size = anchor.radius || this.store.hover.anchorRadius || this.store.options.anchorRadius;
+          if (this.store.hover.type) {
+            size = 3;
+            if (this.store.hover.calculative.lineWidth > 3) {
+              size = this.store.hover.calculative.lineWidth;
             }
-            ctx.beginPath();
-            let size = anchor.radius || this.store.options.anchorRadius;
-            if (this.store.hover.type) {
-              size = 3;
-              if (this.store.hover.calculative.lineWidth > 3) {
-                size = this.store.hover.calculative.lineWidth;
-              }
-            }
-            ctx.arc(anchor.x, anchor.y, size, 0, Math.PI * 2);
-            if (this.store.hover.type && this.store.hoverAnchor === anchor) {
-              ctx.save();
-              ctx.strokeStyle = this.store.hover.activeColor || this.store.options.activeColor;
-              ctx.fillStyle = ctx.strokeStyle;
-            } else if (anchor.color || anchor.background) {
-              ctx.save();
-              ctx.strokeStyle = anchor.color;
-              ctx.fillStyle = anchor.background;
-            }
-            ctx.fill();
-            ctx.stroke();
-            if (anchor === this.store.hoverAnchor) {
-              ctx.restore();
-            }
+          }
+          ctx.arc(anchor.x, anchor.y, size, 0, Math.PI * 2);
+          if (this.store.hover.type && this.store.hoverAnchor === anchor) {
+            ctx.save();
+            ctx.strokeStyle = this.store.hover.activeColor || this.store.options.activeColor;
+            ctx.fillStyle = ctx.strokeStyle;
+          } else if (anchor.color || anchor.background) {
+            ctx.save();
+            ctx.strokeStyle = anchor.color;
+            ctx.fillStyle = anchor.background;
+          }
+          ctx.fill();
+          ctx.stroke();
+          if (anchor === this.store.hoverAnchor) {
+            ctx.restore();
+          }
 
-            if (this.store.hover.type && this.store.hoverAnchor === anchor) {
-              ctx.restore();
-            } else if (anchor.color || anchor.background) {
-              ctx.restore();
-            }
-          });
-        }
+          if (this.store.hover.type && this.store.hoverAnchor === anchor) {
+            ctx.restore();
+          } else if (anchor.color || anchor.background) {
+            ctx.restore();
+          }
+        });
       }
     }
 
@@ -2374,7 +2449,7 @@ export class Canvas {
       this.activeRect &&
       !(this.store.active.length === 1 && this.store.active[0].type)
     ) {
-      if (!getPensLock(this.store.active)) {
+      if (!getPensLock(this.store.active) && !getPensDisableResize(this.store.active)) {
         ctx.strokeStyle = this.store.options.activeColor;
         ctx.fillStyle = '#ffffff';
         this.sizeCPs.forEach((pt, i) => {
@@ -2530,8 +2605,8 @@ export class Canvas {
 
     const p1 = { x: this.mouseDown.x, y: this.mouseDown.y };
     const p2 = { x: e.x, y: e.y };
-    rotatePoint(p1, -this.activeRect.rotate, this.activeRect.center);
-    rotatePoint(p2, -this.activeRect.rotate, this.activeRect.center);
+    // rotatePoint(p1, -this.activeRect.rotate, this.activeRect.center);
+    // rotatePoint(p2, -this.activeRect.rotate, this.activeRect.center);
 
     let x = p2.x - p1.x;
     let y = p2.y - p1.y;
@@ -2558,8 +2633,10 @@ export class Canvas {
     let offsetY = y - this.lastOffsetY;
     this.lastOffsetX = x;
     this.lastOffsetY = y;
-    if ((e as any).shiftKey || (e as any).ctrlKey) {
-      offsetY = (offsetX * h) / w;
+    if ((e as any).ctrlKey) {
+      // 1，3 是右上角和左上角的点，此时的 offsetY 符号与 offsetX 是相反的
+      const sign = [1, 3].includes(this.resizeIndex) ? -1 : 1;
+      offsetY = (sign * (offsetX * h)) / w;
     }
     resizeRect(this.activeRect, offsetX, offsetY, this.resizeIndex);
     calcCenter(this.activeRect);
@@ -2921,11 +2998,11 @@ export class Canvas {
     });
     this.getSizeCPs();
 
-    if (!doing) {
-      this.dirtyLines.forEach((pen) => {
+    this.dirtyLines.forEach((pen) => {
+      if (!doing || pen.text) {
         pen.type && this.initLineRect(pen);
-      });
-    }
+      }
+    });
 
     console.log(oldRects, 'oldRects');
     console.log(newRects, 'newRects');
@@ -2982,6 +3059,48 @@ export class Canvas {
     this.initLineRect(line);
   }
 
+  restoreNodeAnimate(pen: Pen) {
+    if (pen.calculative.initRect) {
+      if (pen.keepAnimateState) {
+        for (const k in pen) {
+          if (pen.calculative[k] === undefined) {
+            continue;
+          }
+          if (
+            k !== 'x' &&
+            k !== 'y' &&
+            k !== 'width' &&
+            k !== 'height' &&
+            k !== 'initRect' &&
+            (typeof pen[k] !== 'object' || k === 'lineDash')
+          ) {
+            pen[k] = pen.calculative[k];
+          }
+        }
+      } else {
+        for (const k in pen) {
+          if (
+            k !== 'x' &&
+            k !== 'y' &&
+            k !== 'width' &&
+            k !== 'height' &&
+            k !== 'initRect' &&
+            (typeof pen[k] !== 'object' || k === 'lineDash')
+          ) {
+            pen.calculative[k] = pen[k];
+          }
+        }
+        pen.calculative.worldRect = pen.calculative.initRect;
+      }
+      this.dirtyPenRect(pen, !pen.keepAnimateState);
+      if (pen.calculative.text !== pen.text) {
+        pen.calculative.text = pen.text;
+        calcTextLines(pen);
+      }
+      pen.calculative.initRect = undefined;
+    }
+  }
+
   updateLines(pen: Pen, change?: boolean) {
     if (!pen.connectedLines) {
       return;
@@ -3017,7 +3136,11 @@ export class Canvas {
       }
 
       translatePoint(lineAnchor, penAnchor.x - lineAnchor.x, penAnchor.y - lineAnchor.y);
-      if ((this.store.options.autoPolyline || line.autoPolyline) && line.lineName === 'polyline') {
+      if (
+        line.autoPolyline !== false &&
+        (this.store.options.autoPolyline || line.autoPolyline) &&
+        line.lineName === 'polyline'
+      ) {
         let from = line.calculative.worldAnchors[0];
         let to = line.calculative.worldAnchors[line.calculative.worldAnchors.length - 1];
 
@@ -3136,7 +3259,6 @@ export class Canvas {
         }
         return;
       }
-
       this.lastAnimateRender = now;
       this.animateRendering = true;
       const dels: Pen[] = [];
@@ -3154,46 +3276,7 @@ export class Canvas {
               this.dirtyPenRect(pen, true, true);
             }
           } else {
-            if (pen.calculative.initRect) {
-              if (pen.keepAnimateState) {
-                for (const k in pen) {
-                  if (pen.calculative[k] === undefined) {
-                    continue;
-                  }
-                  if (
-                    k !== 'x' &&
-                    k !== 'y' &&
-                    k !== 'width' &&
-                    k !== 'height' &&
-                    k !== 'initRect' &&
-                    (typeof pen[k] !== 'object' || k === 'lineDash')
-                  ) {
-                    pen[k] = pen.calculative[k];
-                  }
-                }
-              } else {
-                for (const k in pen) {
-                  if (
-                    // k !== 'rotate' &&
-                    k !== 'x' &&
-                    k !== 'y' &&
-                    k !== 'width' &&
-                    k !== 'height' &&
-                    k !== 'initRect' &&
-                    (typeof pen[k] !== 'object' || k === 'lineDash')
-                  ) {
-                    pen.calculative[k] = pen[k];
-                  }
-                }
-                pen.calculative.worldRect = pen.calculative.initRect;
-              }
-              this.dirtyPenRect(pen, !pen.keepAnimateState);
-              if (pen.calculative.text !== pen.text) {
-                pen.calculative.text = pen.text;
-                calcTextLines(pen);
-              }
-              pen.calculative.initRect = undefined;
-            }
+            this.restoreNodeAnimate(pen);
             dels.push(pen);
             this.nextAnimate(pen);
           }
@@ -3263,40 +3346,111 @@ export class Canvas {
       }
       this.store.clipboard = clipboard.data;
     }
-    const pens: Pen[] = [];
+    // 修改 剪切板的数据 会影响画布实际数据，此处深拷贝不影响画布值
+    this.store.clipboard = deepClone(this.store.clipboard);
+    // 获取剪切板内全部的 pens ，其中包含子节点
+    const realPens = this.getAddPens(this.store.clipboard);
     for (const pen of this.store.clipboard) {
-      const newPen = this.pastePen(pen);
-      newPen && pens.push(newPen);
+      this.pastePen(pen, undefined, realPens);
     }
 
-    this.pasteOffset += 10;
-
-    this.active(pens);
-    this.pushHistory({ type: EditType.Add, pens });
-    this.store.emitter.emit('add', pens);
+    this.active(this.store.clipboard);
+    this.pushHistory({ type: EditType.Add, pens: realPens });
+    this.store.emitter.emit('add', realPens);
   }
 
-  pastePen(pen: Pen, parentId?: string) {
-    const newPen: Pen = deepClone(pen);
-    randomId(newPen);
-    newPen.parentId = parentId;
+  /**
+   * 返回本次添加包含 子节点的内容
+   * @param pens 不包含子节点
+   */
+  getAddPens(pens: Pen[]): Pen[] {
+    const retPens: Pen[] = [];
+    for (const pen of pens) {
+      // 存在子节点
+      pen.children?.forEach((childId) => {
+        if (!retPens.find((retPen) => retPen.id === childId)) {
+          retPens.push(deepClone(this.store.pens[childId]));
+        }
+      });
+    }
+    return retPens.concat(pens);
+  }
+
+  /**
+   *
+   * @param pen 当前复制的画笔
+   * @param parentId 父节点 id
+   * @param pastePens 本次复制的全部画笔，包含子节点
+   * @returns 复制后的画笔
+   */
+  pastePen(pen: Pen, parentId?: string, pastePens: Pen[] = []) {
+    const oldId = pen.id;
+    randomId(pen);
+    pen.parentId = parentId;
     // 子节点无需偏移
-    !parentId && translateRect(newPen, this.pasteOffset, this.pasteOffset);
+    !parentId && translateRect(pen, this.pasteOffset, this.pasteOffset);
+    if (pen.type === PenType.Line) {
+      this.changeNodeConnectedLine(oldId, pen, pastePens);
+    } else {
+      this.changeLineAnchors(oldId, pen, pastePens);
+    }
     if (!this.beforeAddPen || this.beforeAddPen(pen) == true) {
-      this.makePen(newPen);
+      this.makePen(pen);
       const newChildren = [];
-      if (Array.isArray(newPen.children)) {
-        for (const childId of newPen.children) {
-          const pen = this.store.pens[childId];
-          pen && newChildren.push(this.pastePen(pen, newPen.id).id);
+      if (Array.isArray(pen.children)) {
+        for (const childId of pen.children) {
+          const childPen = pastePens.find((pen) => pen.id === childId);
+          childPen && newChildren.push(this.pastePen(childPen, pen.id, pastePens).id);
         }
       }
-      newPen.children = newChildren;
-      return newPen;
+      pen.children = newChildren;
+      return pen;
+    }
+  }
+  /**
+   * 修改对应连线的 anchors
+   * @param oldId 老 id
+   * @param pen 节点
+   * @param pastePens 本次复制的 pens 包含子节点
+   */
+  changeLineAnchors(oldId: string, pen: Pen, pastePens: Pen[]) {
+    pen.connectedLines?.forEach(({ lineId }) => {
+      const line = pastePens.find((pen) => pen.id === lineId);
+      if (line) {
+        const from = line.anchors[0];
+        const to = line.anchors[line.anchors.length - 1];
+        from.connectTo === oldId && (from.connectTo = pen.id);
+        to.connectTo === oldId && (to.connectTo = pen.id);
+      }
+    });
+  }
+
+  /**
+   * 复制连线的过程，修改 与 此线连接 node 的 connectedLines
+   * @param oldId 线原 id
+   * @param line 线
+   * @param pastePens 此处复制的全部 pens (包含子节点)
+   */
+  changeNodeConnectedLine(oldId: string, line: Pen, pastePens: Pen[]) {
+    const from = line.anchors[0];
+    const to = line.anchors[line.anchors.length - 1];
+    // 修改对应节点的 connectedLines
+    const anchors = [from, to];
+    for (const anchor of anchors) {
+      const nodeId = anchor.connectTo;
+      if (nodeId) {
+        const node = pastePens.find((pen) => pen.id === nodeId);
+        node?.connectedLines?.forEach((cl) => {
+          if (cl.lineId === oldId) {
+            cl.lineId = line.id;
+            cl.lineAnchor = anchor.id;
+          }
+        });
+      }
     }
   }
 
-  delete(pens?: Pen[], isSon: boolean = false) {
+  delete(pens?: Pen[], isSon: boolean = false, delLock = false) {
     if (!pens) {
       pens = this.store.active;
     }
@@ -3305,17 +3459,18 @@ export class Canvas {
     }
 
     pens.forEach((pen) => {
-      // TODO: 删除方法无法删除锁住的画笔，子节点可删除
-      if (pen.locked && !isSon) return;
+      if (!delLock && pen.locked && !isSon) return;
       const i = this.store.data.pens.findIndex((item) => item.id === pen.id);
       if (i > -1) {
+        // 删除画笔关联线的 connectTo
+        this.delLineConnectTo(this.store.data.pens[i]);
         this.store.data.pens.splice(i, 1);
         this.store.pens[pen.id] = undefined;
       }
       pen.onDestroy && pen.onDestroy(pen);
       if (Array.isArray(pen.children)) {
         const sonPens = this.store.data.pens.filter((son) => pen.children.includes(son.id));
-        this.delete(sonPens, true); // 递归删除子节点
+        this.delete(sonPens, true, delLock); // 递归删除子节点
       }
     });
     this.inactive();
@@ -3326,9 +3481,41 @@ export class Canvas {
     this.store.emitter.emit('delete', pens);
   }
 
+  /**
+   * 删除该画笔关联线的 connectTo 该节点内容
+   * @param pen 画笔
+   */
+  delLineConnectTo(pen: Pen) {
+    pen.connectedLines?.forEach((info) => {
+      const line = this.store.pens[info.lineId];
+      if (line) {
+        const from = line.anchors[0];
+        const to = line.anchors[line.anchors.length - 1];
+        if (from.connectTo === pen.id) {
+          from.connectTo = undefined;
+          from.anchorId = undefined;
+          from.prev && (from.prev.connectTo = undefined);
+          from.next && (from.next.connectTo = undefined);
+        }
+        if (to.connectTo === pen.id) {
+          to.connectTo = undefined;
+          to.anchorId = undefined;
+          to.prev && (to.prev.connectTo = undefined);
+          to.next && (to.next.connectTo = undefined);
+        }
+        calcWorldAnchors(line);
+        getLineRect(line);
+      }
+    });
+  }
+
   private ondblclick = (e: any) => {
     if (this.store.hover && !this.store.data.locked && !this.store.options.disableInput) {
-      this.showInput(this.store.hover);
+      if (this.store.hover.onShowInput) {
+        this.store.hover.onShowInput(this.store.hover, e);
+      } else {
+        this.showInput(this.store.hover);
+      }
     }
 
     this.store.emitter.emit('dblclick', {
@@ -3338,25 +3525,31 @@ export class Canvas {
     });
   };
 
-  showInput = (pen: Pen) => {
-    if (this.store.hover.locked || this.store.hover.externElement || this.store.hover.disableInput) {
+  showInput = (pen: Pen, rect?: Rect, background = 'transparent') => {
+    if (
+      !this.store.hover ||
+      this.store.hover.locked ||
+      this.store.hover.externElement ||
+      this.store.hover.disableInput
+    ) {
       return;
     }
     if (this.input.dataset.penId === pen.id) {
       this.input.focus();
       return;
     }
-    const textRect = pen.calculative.worldTextRect;
-    this.input.value = pen.text || '';
+    const textRect = rect || pen.calculative.worldTextRect;
+    this.input.value = pen.calculative.tempText || pen.text || '';
     this.inputParent.style.left = textRect.x + this.store.data.x + 5 + 'px';
     this.inputParent.style.top = textRect.y + this.store.data.y + 5 + 'px';
     this.inputParent.style.width = textRect.width - 10 + 'px';
     this.inputParent.style.height = textRect.height - 10 + 'px';
     this.inputParent.style.zIndex = '1000';
+    this.inputParent.style.background = background;
     if (pen.rotate % 360) {
       this.inputParent.style.transform = `rotate(${pen.rotate}deg)`;
     } else {
-      this.input.style.transform = undefined;
+      this.inputParent.style.transform = null;
     }
     this.inputParent.style.display = 'flex';
     this.input.dataset.penId = pen.id;
@@ -3376,11 +3569,15 @@ export class Canvas {
     if (this.inputParent.style.display === 'flex') {
       this.inputParent.style.display = 'none';
       const pen = this.store.pens[this.input.dataset.penId];
+      // pen.calculative.text 恢复
+      pen.calculative.text = pen.text;
       if (!pen) {
         return;
       }
 
-      if (pen.calculative.text !== this.input.value) {
+      if (pen.onInput) {
+        pen.onInput(pen, this.input.value);
+      } else if (pen.text !== this.input.value) {
         this.initPens = [deepClone(pen)];
         pen.text = this.input.value;
         pen.calculative.text = pen.text;
@@ -3440,14 +3637,14 @@ export class Canvas {
       sheet.insertRule('.topology-input ul li:hover{background: #eeeeee;}');
     }
     this.input.onclick = () => {
+      const pen = this.store.pens[this.input.dataset.penId];
       if (this.dropdown.style.display === 'block') {
         this.dropdown.style.display = 'none';
         this.inputRight.style.transform = 'rotate(135deg)';
-      } else {
+      } else if (pen.dropdownList) {
         this.dropdown.style.display = 'block';
         this.inputRight.style.transform = 'rotate(315deg)';
       }
-      const pen = this.store.pens[this.input.dataset.penId];
       this.store.emitter.emit('clickInput', pen);
     };
     this.input.onkeyup = (e: KeyboardEvent) => {
@@ -3539,6 +3736,8 @@ export class Canvas {
     if (typeof pen.dropdownList[index] === 'object') {
       const rect = this.getPenRect(pen);
       this.updateValue(pen, { ...rect, ...pen.dropdownList[index] });
+      // 上面会更新 calculative.text 下方置空
+      pen.calculative.text = '';
       this.calcActiveRect();
     } else {
       pen.text = pen.dropdownList[index] + '';

@@ -4,7 +4,7 @@ import { Direction } from '../data';
 import { distance, facePoint, Point, rotatePoint, scalePoint, translatePoint } from '../point';
 import { calcCenter, calcRelativePoint, Rect, scaleRect, translateRect } from '../rect';
 import { globalStore, TopologyStore } from '../store';
-import { calcTextLines } from './text';
+import { calcTextLines, calcTextDrawRect } from './text';
 import { deepClone } from '../utils/clone';
 import { renderFromArrow, renderToArrow } from './arrow';
 import { Flip, Gradient, PenType } from '@topology/core';
@@ -176,8 +176,7 @@ export function renderPen(ctx: CanvasRenderingContext2D, pen: Pen) {
     fill = pen.activeBackground || store.options.activeBackground;
     ctx.fillStyle = fill;
     fill && (setBack = false);
-  }
-  if (setBack) {
+  } else {
     if (pen.calculative.strokeImage) {
       if (pen.calculative.strokeImg) {
         ctx.strokeStyle = ctx.createPattern(pen.calculative.strokeImg, 'repeat');
@@ -193,7 +192,8 @@ export function renderPen(ctx: CanvasRenderingContext2D, pen: Pen) {
       }
       ctx.strokeStyle = stroke;
     }
-
+  }
+  if (setBack) {
     if (pen.calculative.backgroundImage) {
       if (pen.calculative.backgroundImg) {
         ctx.fillStyle = ctx.createPattern(pen.calculative.backgroundImg, 'repeat');
@@ -489,7 +489,7 @@ export function renderPen(ctx: CanvasRenderingContext2D, pen: Pen) {
     ctx.restore();
   }
 
-  if (pen.calculative.text) {
+  if (pen.calculative.text && !pen.calculative.hiddenText) {
     ctx.save();
     if (pen.calculative.hover) {
       fill = pen.hoverTextColor || pen.hoverColor || store.options.hoverColor;
@@ -501,9 +501,14 @@ export function renderPen(ctx: CanvasRenderingContext2D, pen: Pen) {
     if (fill) {
       ctx.fillStyle = fill;
     } else {
-      ctx.fillStyle = pen.calculative.textColor || pen.calculative.color || store.options.color;
+      ctx.fillStyle = pen.calculative.textColor || pen.calculative.color || store.data.color || store.options.color;
     }
 
+    ctx.font = `${pen.calculative.fontStyle || 'normal'} normal ${pen.calculative.fontWeight || 'normal'} ${
+      pen.calculative.fontSize
+    }px/${pen.calculative.lineHeight} ${pen.calculative.fontFamily || store.options.fontFamily}`;
+
+    !pen.calculative.textDrawRect && calcTextDrawRect(ctx, pen);
     if (pen.calculative.textBackground) {
       ctx.save();
       ctx.fillStyle = pen.calculative.textBackground;
@@ -516,35 +521,14 @@ export function renderPen(ctx: CanvasRenderingContext2D, pen: Pen) {
       ctx.restore();
     }
 
-    ctx.font = `${pen.calculative.fontStyle || 'normal'} normal ${pen.calculative.fontWeight || 'normal'} ${
-      pen.calculative.fontSize
-    }px/${pen.calculative.lineHeight} ${pen.calculative.fontFamily}`;
-
-    if (pen.textAlign) {
-      ctx.textAlign = pen.textAlign as any;
-    } else {
-      ctx.textAlign = 'center';
-    }
-
-    // if (pen.textBaseline) {
-    //   ctx.textBaseline = pen.textBaseline as any;
-    // }
-
-    const y = 0.5;
-    // switch (pen.textBaseline) {
-    //   case 'top':
-    //     y = 0;
-    //     break;
-    //   case 'bottom':
-    //     y = 1;
-    //     break;
-    // }
+    const y = 0.55;
+    const { width } = pen.calculative.textDrawRect;
     pen.calculative.textLines.forEach((text, i) => {
       let x = 0;
       if (!pen.textAlign || pen.textAlign === 'center') {
-        x = pen.calculative.textDrawRect.width / 2;
+        x = (width - pen.calculative.textLineWidths[i]) / 2;
       } else if (pen.textAlign === 'right') {
-        x = pen.calculative.textDrawRect.width;
+        x = width - pen.calculative.textLineWidths[i];
       }
       ctx.fillText(
         text,
@@ -795,18 +779,19 @@ export function renderPenRaw(ctx: CanvasRenderingContext2D, pen: Pen, rect?: Rec
     ctx.restore();
   }
 
-  if (pen.calculative.text) {
+  if (pen.calculative.text && !pen.calculative.hiddenText) {
     ctx.save();
     ctx.fillStyle = pen.calculative.textColor || pen.calculative.color;
+    ctx.font = `${pen.calculative.fontStyle || 'normal'} normal ${pen.calculative.fontWeight || 'normal'} ${
+      pen.calculative.fontSize
+    }px/${pen.calculative.lineHeight} ${pen.calculative.fontFamily || store.options.fontFamily}`;
+
+    !pen.calculative.textDrawRect && calcTextDrawRect(ctx, pen);
     if (pen.calculative.textBackground) {
       ctx.save();
       ctx.fillStyle = pen.calculative.textBackground;
-      let x = 0;
-      if (pen.textAlign === 'right') {
-        x = pen.calculative.textDrawRect.width;
-      }
       ctx.fillRect(
-        pen.calculative.textDrawRect.x - x,
+        pen.calculative.textDrawRect.x,
         pen.calculative.textDrawRect.y,
         pen.calculative.textDrawRect.width,
         pen.calculative.textDrawRect.height
@@ -814,33 +799,14 @@ export function renderPenRaw(ctx: CanvasRenderingContext2D, pen: Pen, rect?: Rec
       ctx.restore();
     }
 
-    ctx.font = `${pen.fontStyle || 'normal'} normal ${pen.calculative.fontWeight || 'normal'} ${
-      pen.calculative.fontSize
-    }px/${pen.calculative.lineHeight} ${pen.calculative.fontFamily}`;
-
-    if (pen.textAlign) {
-      ctx.textAlign = pen.textAlign as any;
-    } else {
-      ctx.textAlign = 'center';
-    }
-
-    if (pen.textBaseline) {
-      ctx.textBaseline = pen.textBaseline as any;
-    }
-
-    let y = 0.5;
-    switch (pen.textBaseline) {
-      case 'top':
-        y = 0;
-        break;
-      case 'bottom':
-        y = 1;
-        break;
-    }
+    const y = 0.55;
+    const { width } = pen.calculative.textDrawRect;
     pen.calculative.textLines.forEach((text, i) => {
       let x = 0;
       if (!pen.textAlign || pen.textAlign === 'center') {
-        x = pen.calculative.textDrawRect.width / 2;
+        x = (width - pen.calculative.textLineWidths[i]) / 2;
+      } else if (pen.textAlign === 'right') {
+        x = width - pen.calculative.textLineWidths[i];
       }
       ctx.fillText(
         text,
@@ -992,7 +958,7 @@ export function calcWorldRects(pen: Pen) {
   return rect;
 }
 
-function calcPadding(pen: Pen, rect: Rect) {
+export function calcPadding(pen: Pen, rect: Rect) {
   !pen.paddingTop && (pen.calculative.paddingTop = 0);
   !pen.paddingBottom && (pen.calculative.paddingBottom = 0);
   !pen.paddingLeft && (pen.calculative.paddingLeft = 0);
@@ -1021,7 +987,8 @@ export function calcPenRect(pen: Pen) {
 }
 
 export function calcWorldAnchors(pen: Pen) {
-  if (pen.hideAnchor && !pen.type) {
+  const store = pen.calculative.canvas.store;
+  if ((pen.disableAnchor || store.options.disableAnchor) && !pen.type) {
     pen.calculative.worldAnchors = [];
     return;
   }
@@ -1277,6 +1244,7 @@ export function deleteTempAnchor(pen: Pen) {
   }
 }
 
+// 添加line到pen的connectedLines中，并关联相关属性
 export function connectLine(pen: Pen, lineId: string, lineAnchor: string, anchor: string) {
   if (!pen || !lineId || !lineAnchor || !anchor) {
     return;
@@ -1405,6 +1373,14 @@ export function setNodeAnimate(pen: Pen, now: number) {
     if (++pen.calculative.frameIndex >= pen.frames.length) {
       ++pen.calculative.cycleIndex;
       pen.calculative.frameIndex = 0;
+
+      for (const k in pen) {
+        if (k === 'rotate' || k === 'x' || k === 'y' || k === 'scale') {
+          pen.lastFrame[k] = 0;
+        }
+      }
+      pen.calculative.x = pen.calculative.initRect.x;
+      pen.calculative.y = pen.calculative.initRect.y;
     }
     // 播放结束
     if (pen.calculative.cycleIndex > pen.animateCycle) {
@@ -1632,7 +1608,7 @@ export function setChildrenActive(pen: Pen, active = true) {
     const child: Pen = store.pens[id];
     if (child) {
       child.calculative.active = active;
-  
+
       setChildrenActive(child);
     }
   });
@@ -1646,7 +1622,10 @@ export function setHover(pen: Pen, hover = true) {
   pen.calculative.hover = hover;
   if (pen.children) {
     pen.children.forEach((id) => {
-      setHover(store.pens[id], hover);
+      // 子节点没有自己的独立hover，继承父节点hover
+      if (store.pens[id].hoverColor == null && store.pens[id].hoverBackground == null) {
+        setHover(store.pens[id], hover);
+      }
     });
   }
 }
@@ -1663,7 +1642,7 @@ export function setElemPosition(pen: Pen, elem: HTMLElement) {
   elem.style.top = worldRect.y + store.data.y + 'px';
   elem.style.width = worldRect.width + 'px';
   elem.style.height = worldRect.height + 'px';
-  elem.style.display = pen.calculative.visible !== false ? 'inline' : 'none'; // 是否隐藏元素
+  elem.style.display = pen.calculative.visible != false ? 'inline' : 'none'; // 是否隐藏元素
   !pen.calculative.rotate && (pen.calculative.rotate = 0);
   elem.style.transform = `rotate(${pen.calculative.rotate}deg)`;
   if (pen.locked || store.data.locked) {
@@ -1683,6 +1662,37 @@ export function setElemPosition(pen: Pen, elem: HTMLElement) {
 export function getPensLock(pens: Pen[]): boolean {
   for (const pen of pens) {
     if (!pen.locked) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * 画笔们的 disabledRotate = true
+ * 即 全部禁止旋转 返回 true
+ * @param pens 画笔
+ * @returns 
+ */
+export function getPensDisableRotate(pens: Pen[]): boolean {
+  for (const pen of pens) {
+    if (!pen.disableRotate) {
+      return false;
+    }
+  }
+  return true;
+}
+
+
+/**
+ * 画笔们的 disableSize = true
+ * 即 全部不允许改变大小 返回 true
+ * @param pens 画笔
+ * @returns 
+ */
+export function getPensDisableResize(pens: Pen[]): boolean {
+  for (const pen of pens) {
+    if (!pen.disableSize) {
       return false;
     }
   }

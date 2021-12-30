@@ -42,7 +42,7 @@ export interface Pen extends Rect {
   lineName?: string;
   borderRadius?: number;
   layer?: number;
-  // Hidden only visible === false
+  // Hidden only visible == false
   visible?: boolean;
   locked?: LockState;
 
@@ -206,7 +206,8 @@ export interface Pen extends Rect {
 
   flip?: Flip;
 
-  hideAnchor?: boolean;
+  hiddenText?: boolean; // 隐藏 text
+  keepDecimal?: number; // undefined 显示原内容；0 显示整数
   // calculative 对象中的值是为了动画存在，表明了渐变过程中，画布上绘制的当前值
   calculative?: {
     x?: number;
@@ -260,6 +261,7 @@ export interface Pen extends Rect {
     shadowOffsetX?: number;
     shadowOffsetY?: number;
 
+    tempText?: string;
     text?: string;
     textWidth?: number;
     textHeight?: number;
@@ -291,6 +293,7 @@ export interface Pen extends Rect {
     paddingRight?: number;
 
     textLines?: string[];
+    textLineWidths?: number[]; // textLines 每一行 width 组成的数组
     image?: string;
     img?: HTMLImageElement;
     imgNaturalWidth?: number;
@@ -334,9 +337,7 @@ export interface Pen extends Rect {
 
     layer?: number;
     dropdownList?: any[];
-    fns?: any;
 
-    elementLoaded?: boolean;
     canvas?: any;
 
     iframe?: string;
@@ -346,6 +347,8 @@ export interface Pen extends Rect {
 
     flip?: Flip;
 
+    hiddenText?: boolean; // 隐藏 text
+    keepDecimal?: number; // undefined 显示原内容；0 显示整数；保留几位小数
     // media element
     onended?: (pen: Pen) => void;
   };
@@ -360,7 +363,11 @@ export interface Pen extends Rect {
   onResize?: (pen: Pen) => void;
   onRotate?: (pen: Pen) => void;
   onClick?: (pen: Pen, e: Point) => void;
+  onMouseEnter?: (pen: Pen, e: Point) => void;
+  onMouseLeave?: (pen: Pen, e: Point) => void;
   onMouseDown?: (pen: Pen, e: Point) => void;
   onMouseMove?: (pen: Pen, e: Point) => void;
   onMouseUp?: (pen: Pen, e: Point) => void;
+  onShowInput?: (pen: Pen, e: Point) => void;
+  onInput?: (pen: Pen, text: string) => void;
 }

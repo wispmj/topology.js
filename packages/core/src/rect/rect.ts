@@ -80,10 +80,7 @@ export function getRect(pens: Pen[]): Rect {
     const rect = pen.calculative.worldRect;
     if (rect) {
       const pts = rectToPoints(rect);
-      pts.forEach((pt) => {
-        rotatePoint(pt, pen.rotate, rect.center);
-      });
-
+      // rectToPoints 已经计算过 rotate 无需重复计算
       points.push(...pts);
     }
   });
@@ -128,6 +125,10 @@ export function getRectOfPoints(points: Point[]): Rect {
 }
 
 export function rectInRect(source: Rect, target: Rect, allIn?: boolean) {
+  if (source.rotate) {
+    // 根据 rotate 扩大 rect
+    source = getRectOfPoints(rectToPoints(source)); // 更改 source 引用地址值，不影响原值
+  }
   if (allIn) {
     return source.x > target.x && source.ex < target.ex && source.y > target.y && source.ey < target.ey;
   }
@@ -146,7 +147,129 @@ export function translateRect(rect: Rect | Pen, x: number, y: number) {
   }
 }
 
+
+/**
+ * 通过两条线段计算出相交的点
+ * @param line1 线段1
+ * @param line2 线段2
+ */
+function getIntersectPoint(line1: {from: Point, to: Point}, line2: {from: Point, to: Point}) : Point {
+  const k1 = (line1.to.y - line1.from.y) / (line1.to.x - line1.from.x);
+  const k2 = (line2.to.y - line2.from.y) / (line2.to.x - line2.from.x);
+  return getIntersectPointByK(
+    {
+      k: k1,
+      point: line1.from
+    },
+    {
+      k: k2,
+      point: line2.from
+    }
+  )
+}
+
+/**
+ * 该方法作用同上，不过此方法需要传的是 斜率
+ * @param line1 线段1
+ * @param line2 线段2
+ * @returns 
+ */
+function getIntersectPointByK(line1: {k: number, point: Point}, line2: {k: number, point: Point}): Point {
+  if (isZero(line1.k)) {
+    return {
+      x: line2.point.x,
+      y: line1.point.y
+    }
+  } else if (isZero(line2.k)) {
+    return {
+      x: line1.point.x,
+      y: line2.point.y
+    }
+  }
+
+  const b1 = line1.point.y - (line1.k) * line1.point.x;
+  const b2 = line2.point.y - (line2.k) * line2.point.x;
+  const x = (b2 - b1) / (line1.k - line2.k);
+  const y = line1.k * x + b1;
+  
+  return {
+    x,
+    y
+  }
+}
+
+/**
+ * 通过 4 个点和旋转角度，计算出原矩形（旋转前的矩形）
+ * @param pts 4 个点
+ * @param rotate 旋转角度
+ */
+function pointsToRect(pts: Point[], rotate: number): Rect {
+  // 1. 计算 center，认为 0，2 ；1，3 的连线相交就是 center 点
+  const center = getIntersectPoint(
+    {
+      from: pts[0],
+      to: pts[2]
+    },
+    {
+      from: pts[1],
+      to: pts[3]
+    });
+  // 2. 把点反向转 rotate °
+  for (const pt of pts) {
+    rotatePoint(pt, -rotate, center);
+  }
+  // 3. 计算区域
+  return getRectOfPoints(pts);
+}
+
+/**
+ * js 计算存在误差，认为 num 在该范围内的值就是 0
+ * @param num 数字
+ * @returns 是否接近 0
+ */
+function isZero(num: number) : boolean {
+  return num > -0.000000001 && num < 0.000000001;
+}
+
 export function resizeRect(rect: Rect | Pen, offsetX: number, offsetY: number, resizeIndex: number) {
+  if (rect.rotate && rect.rotate % 360) {
+    // 计算出外边的四个点
+    const pts = rectToPoints(rect);
+    // 斜率不改变，提前计算
+    const k1 = (pts[0].y - pts[1].y) / (pts[0].x - pts[1].x);
+    const k2 = (pts[1].y - pts[2].y) / (pts[1].x - pts[2].x);
+    if (resizeIndex < 4) {  // 斜对角的四个点
+      // resize 的点
+      pts[resizeIndex].x += offsetX;
+      pts[resizeIndex].y += offsetY;
+      // 不变的点
+      const noChangePoint = pts[(resizeIndex + 2) % 4];
+      // 由于斜率是不变的，我们只需要根据斜率 和 已知的两点求出相交的 另外两点
+      pts[(resizeIndex + 1) % 4] = getIntersectPointByK({k: resizeIndex % 2 ? k2 : k1, point: pts[resizeIndex]}, {k: resizeIndex % 2 ? k1 : k2, point: noChangePoint});
+      pts[(resizeIndex + 4 - 1) % 4] = getIntersectPointByK({k: resizeIndex % 2 ? k1 : k2, point: pts[resizeIndex]}, {k: resizeIndex % 2 ? k2 : k1, point: noChangePoint});
+    } else { 
+      // 边缘四个点有两个点固定
+      const k = [4, 6].includes(resizeIndex) ? k2 : k1;
+      if (!isZero(k)) {
+        pts[(resizeIndex) % 4].y += offsetY;
+        pts[(resizeIndex) % 4].x += offsetY / k;
+        pts[(resizeIndex + 1) % 4].y += offsetY;
+        pts[(resizeIndex + 1) % 4].x += offsetY / k;
+      } else {
+        pts[(resizeIndex) % 4].x += offsetX;
+        pts[(resizeIndex + 1) % 4].x += offsetX;
+      }
+    }
+    if ((pts[0].x - pts[1].x) ** 2 + (pts[0].y - pts[1].y) ** 2 < 25
+      || (pts[1].x - pts[2].x) ** 2 + (pts[1].y - pts[2].y) ** 2 < 25) {
+        // 距离小于 5 不能继续 resize 了
+        return;
+    }
+    const retRect = pointsToRect(pts, rect.rotate);
+    calcCenter(retRect);
+    Object.assign(rect, retRect);
+    return;
+  }
   switch (resizeIndex) {
     case 0:
       if (rect.width - offsetX < 5 || rect.height - offsetY < 5) {

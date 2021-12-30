@@ -4,8 +4,12 @@ export function calcTextRect(pen: Pen) {
   const { paddingTop, paddingBottom, paddingLeft, paddingRight } = pen.calculative;
   let x = paddingLeft;
   let y = paddingTop;
-  let width = pen.calculative.worldRect.width - paddingLeft - paddingRight;
-  let height = pen.calculative.worldRect.height - paddingTop - paddingBottom;
+  let textWidth = pen.calculative.textWidth || pen.calculative.worldRect.width;
+  textWidth < 1 && (textWidth = textWidth * pen.calculative.worldRect.width);
+  let textHeight = pen.calculative.textHeight || pen.calculative.worldRect.height;
+  textHeight < 1 && (textHeight = textHeight * pen.calculative.worldRect.height);
+  let width = textWidth - paddingLeft - paddingRight;
+  let height = textHeight - paddingTop - paddingBottom;
   let textLeft = pen.calculative.textLeft;
   let textTop = pen.calculative.textTop;
   if (textLeft && Math.abs(textLeft) < 1) {
@@ -34,20 +38,23 @@ export function calcTextRect(pen: Pen) {
   pen.calculative.worldTextRect = rect;
 
   calcTextLines(pen);
+  pen.calculative.textDrawRect = undefined;
+}
 
+export function calcTextDrawRect(ctx: CanvasRenderingContext2D, pen: Pen) {
   // By default, the text is center aligned.
   const lineHeight = pen.calculative.fontSize * pen.calculative.lineHeight;
   const h = pen.calculative.textLines.length * lineHeight;
-  let textWidth = pen.calculative.textWidth || pen.calculative.worldTextRect.width;
-  textWidth < 1 && (textWidth = textWidth * pen.calculative.worldTextRect.width);
-  x = rect.x + (pen.calculative.worldTextRect.width - textWidth) / 2;
-  y = rect.y + (rect.height - h) / 2;
+  const textWidth = calcTextAdaptionWidth(ctx, pen);
+  const rect = pen.calculative.worldTextRect;
+  let x = rect.x + (rect.width - textWidth) / 2;
+  let y = rect.y + (rect.height - h) / 2;
   switch (pen.textAlign) {
     case 'left':
       x = rect.x;
       break;
     case 'right':
-      x = rect.x + pen.calculative.worldTextRect.width - textWidth;
+      x = rect.x + rect.width - textWidth;
       break;
   }
   switch (pen.textBaseline) {
@@ -69,29 +76,32 @@ export function calcTextRect(pen: Pen) {
   };
 }
 
-export function calcTextLines(pen: Pen) {
-  if (!pen.calculative.text) {
+export function calcTextLines(pen: Pen, text?: string) {
+  if (!pen.calculative.text && !text) {
     pen.calculative.textLines = [];
     return;
+  }
+  if (!text) {
+    text = pen.calculative.text;
   }
   let lines = [];
   switch (pen.whiteSpace) {
     case 'nowrap':
-      lines.push(pen.calculative.text);
+      lines.push(text);
       break;
     case 'pre-line':
-      if (pen.calculative.text.split) {
-        lines = pen.calculative.text.split(/[\n]/g);
+      if (text.split) {
+        lines = text.split(/[\n]/g);
       } else {
-        lines = pen.calculative.text.toString().split(/[\n]/g);
+        lines = text.toString().split(/[\n]/g);
       }
       break;
     default:
       let paragraphs: string[];
-      if (pen.calculative.text.split) {
-        paragraphs = pen.calculative.text.split(/[\n]/g);
+      if (text.split) {
+        paragraphs = text.split(/[\n]/g);
       } else {
-        paragraphs = pen.calculative.text.toString().split(/[\n]/g);
+        paragraphs = text.toString().split(/[\n]/g);
       }
       let h = 0;
       paragraphs.forEach((item) => {
@@ -106,9 +116,7 @@ export function calcTextLines(pen: Pen) {
               return;
             }
             h += pen.calculative.fontSize * pen.calculative.lineHeight;
-            let textHeight = pen.calculative.textHeight || pen.calculative.worldTextRect.height;
-            // 认为是百分比
-            textHeight < 1 && (textHeight = textHeight * pen.calculative.worldTextRect.height);
+            const textHeight = pen.calculative.worldTextRect.height;
             if (h > textHeight) {
               l.slice(0, -3);
               l += '...';
@@ -123,7 +131,18 @@ export function calcTextLines(pen: Pen) {
       break;
   }
 
+  if (pen.calculative.keepDecimal || pen.calculative.keepDecimal === 0) {
+    lines.forEach((text, i) => {
+      const textNum = Number(text);
+      if (!isNaN(textNum)) {
+        lines[i] = textNum.toFixed(pen.calculative.keepDecimal);
+      }
+    });
+  }
+
   pen.calculative.textLines = lines;
+
+  return lines;
 }
 
 export function getWords(txt: string) {
@@ -161,8 +180,7 @@ export function wrapLines(words: string[], pen: Pen) {
     const text = currentLine + word;
     const chinese = text.match(/[\u4e00-\u9fa5]/g) || '';
     const chineseLen = chinese.length;
-    let textWidth = pen.calculative.textWidth || pen.calculative.worldTextRect.width;
-    textWidth < 1 && (textWidth = textWidth * pen.calculative.worldTextRect.width);
+    const textWidth = pen.calculative.worldTextRect.width;
     if (
       (text.length - chineseLen) * pen.calculative.fontSize * 0.6 + chineseLen * pen.calculative.fontSize <=
       textWidth
@@ -175,4 +193,15 @@ export function wrapLines(words: string[], pen: Pen) {
   }
   currentLine.length && lines.push(currentLine);
   return lines;
+}
+
+export function calcTextAdaptionWidth(ctx: CanvasRenderingContext2D, pen: Pen): number {
+  let maxWidth = 0;
+  pen.calculative.textLineWidths = [];
+  pen.calculative.textLines.forEach((text: string) => {
+    const width = ctx.measureText(text).width;
+    pen.calculative.textLineWidths.push(width);
+    maxWidth < width && (maxWidth = width);
+  });
+  return maxWidth;
 }
