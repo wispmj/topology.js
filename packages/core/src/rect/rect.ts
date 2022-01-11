@@ -401,15 +401,16 @@ export function calcRelativePoint(pt: Point, worldRect: Rect) {
  * 计算可视区域，即线宽是会影响到 实际的宽高的
  * @param rect 世界坐标 rect
  * @param lineWidth 线宽
- * @param dpiRatio dpi
  * @returns 
  */
-export function calcEyeRect(rect: Rect, lineWidth: number, dpiRatio: number) {
+export function calcEyeRect(rect: Rect, lineWidth: number) {
+  // 与 dpiRatio 无关，偶尔计算错误，暂时不知道为什么
+  // 稍微多计算一点，可能消耗更多的绘制性能
   const realRect: Rect = {
-    x: rect.x - dpiRatio * lineWidth / 2,
-    y: rect.y - dpiRatio * lineWidth / 2,
-    width: rect.width + lineWidth * dpiRatio,
-    height: rect.height + lineWidth * dpiRatio,
+    x: rect.x - 1 * lineWidth / 2 - 0.5,
+    y: rect.y - 1 * lineWidth / 2 - 0.5,
+    width: rect.width + lineWidth * 1 + 1,
+    height: rect.height + lineWidth * 1 + 1,
     rotate: rect.rotate
   };
   calcCenter(realRect);

@@ -2221,7 +2221,7 @@ export class Canvas {
     offscreenCtx.save();
     offscreenCtx.translate(this.store.data.x, this.store.data.y);
     window && window.debugRender && console.time('renderPens');
-    this.renderPens();
+    this.renderPens(this.store.data.pens);
     window && window.debugRender && console.timeEnd('renderPens');
     this.renderBorder();
     this.renderHoverPoint();
@@ -2271,11 +2271,9 @@ export class Canvas {
     if (this.store.data.background) {
       offscreenCtx.save();
       offscreenCtx.fillStyle = this.store.data.background;
+      offscreenCtx.translate(0.5, 0.5);
       for (const oldRect of oldRects) {
-        offscreenCtx.save();
-        offscreenCtx.translate(0.5, 0.5);
         offscreenCtx.fillRect(oldRect.x, oldRect.y, oldRect.width, oldRect.height);
-        offscreenCtx.restore();
       }
       offscreenCtx.restore();
     }
@@ -2283,6 +2281,7 @@ export class Canvas {
     offscreenCtx.save();
     offscreenCtx.translate(this.store.data.x, this.store.data.y);
     // TODO: 改动的 pens 才进行重绘
+    this.renderPens(changedPens);
     // this.renderPens();
     // this.renderBorder();
     // this.renderHoverPoint();
@@ -2311,13 +2310,13 @@ export class Canvas {
       for (const oldRect of oldRects) {
         if (rectInRect(oldRect, pen.calculative.worldRect) && !newPens.find(newPen => newPen.id === pen.id)) {
           newPens.push(pen);
-          oldRects.push(calcEyeRect(pen.calculative.worldRect, pen.calculative.lineWidth, this.store.dpiRatio));
+          oldRects.push(calcEyeRect(pen.calculative.worldRect, pen.calculative.lineWidth));
         }
       }
       for (const newRect of newRects) {
         if (rectInRect(newRect, pen.calculative.worldRect) && !newPens.find(newPen => newPen.id === pen.id)) {
           newPens.push(pen);
-          oldRects.push(calcEyeRect(pen.calculative.worldRect, pen.calculative.lineWidth, this.store.dpiRatio));
+          oldRects.push(calcEyeRect(pen.calculative.worldRect, pen.calculative.lineWidth));
         }
       }
     }
@@ -2327,7 +2326,7 @@ export class Canvas {
     return this.getDisturbPens(oldRects, newRects, newPens);
   }
 
-  renderPens = () => {
+  renderPens = (pens: Pen[]) => {
     const ctx = this.offscreen.getContext('2d') as CanvasRenderingContext2D;
     ctx.save();
     ctx.strokeStyle = this.store.data.color || this.store.options.color;
@@ -2340,7 +2339,7 @@ export class Canvas {
       height: this.height,
     };
 
-    for (const pen of this.store.data.pens) {
+    for (const pen of pens) {
       if (pen.visible == false || pen.calculative.visible == false) {
         pen.calculative.inView = false;
         continue;
@@ -3014,9 +3013,9 @@ export class Canvas {
         this.store.path2dMap.set(pen, globalStore.path2dDraws[pen.name](pen));
       } else {
         // 各个方向填充
-        oldRects.push(calcEyeRect(pen.calculative.worldRect, pen.calculative.lineWidth, this.store.dpiRatio));
+        oldRects.push(calcEyeRect(pen.calculative.worldRect, pen.calculative.lineWidth));
         translateRect(pen.calculative.worldRect, x, y);
-        newRects.push(calcEyeRect(pen.calculative.worldRect, pen.calculative.lineWidth, this.store.dpiRatio));
+        newRects.push(calcEyeRect(pen.calculative.worldRect, pen.calculative.lineWidth));
         calcPenRect(pen);
         pen.calculative.x = pen.x;
         pen.calculative.y = pen.y;
@@ -3298,6 +3297,8 @@ export class Canvas {
       this.animateRendering = true;
       const dels: Pen[] = [];
       let active = false;
+      const oldRects = [];
+      const newRects = [];
       for (let pen of this.store.animates) {
         if (pen.calculative.pause) {
           continue;
@@ -3305,6 +3306,7 @@ export class Canvas {
         if (pen.calculative.active && !pen.type) {  // 存在节点在活动层
           active = true;
         }
+        oldRects.push(calcEyeRect(pen.calculative.worldRect, pen.calculative.lineWidth));
         if (!pen.type) {
           if (setNodeAnimate(pen, now)) {
             if (pen.calculative.dirty) {
@@ -3341,6 +3343,7 @@ export class Canvas {
         }
 
         this.dirty = true;
+        newRects.push(calcEyeRect(pen.calculative.worldRect, pen.calculative.lineWidth));
       }
       if (active) {
         this.calcActiveRect();
@@ -3348,7 +3351,8 @@ export class Canvas {
       dels.forEach((pen) => {
         this.store.animates.delete(pen);
       });
-      this.render();
+      this.diffRender(oldRects, newRects);
+      // this.render();
       this.animateRendering = false;
       this.animate();
     });
