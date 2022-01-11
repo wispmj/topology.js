@@ -248,10 +248,11 @@ export function renderPen(ctx: CanvasRenderingContext2D, pen: Pen) {
     if (pen.type === PenType.Line && pen.borderWidth) {
       ctx.save();
       ctx.beginPath();
-      ctx.lineWidth = pen.calculative.lineWidth + pen.calculative.borderWidth;
+      const lineWidth = pen.calculative.lineWidth + pen.calculative.borderWidth;
+      ctx.lineWidth = lineWidth;
       ctx.strokeStyle = pen.borderColor;
       fill && ctx.fill(path);
-      ctx.stroke(path);
+      lineWidth && ctx.stroke(path);
       ctx.restore();
     }
     fill && ctx.fill(path);
@@ -283,12 +284,12 @@ export function renderPen(ctx: CanvasRenderingContext2D, pen: Pen) {
       ctx.restore();
     }
 
-    ctx.stroke(path);
+    pen.calculative.lineWidth && ctx.stroke(path);
 
     if (pen.type) {
       if (pen.calculative.animatePos) {
         ctx.save();
-        ctx.strokeStyle = pen.animateColor;
+        ctx.strokeStyle = pen.animateColor || store.options.animateColor;
         let len: number;
         switch (pen.lineAnimateType) {
           case 1:
@@ -523,11 +524,12 @@ export function renderPen(ctx: CanvasRenderingContext2D, pen: Pen) {
 
     const y = 0.55;
     const { width } = pen.calculative.textDrawRect;
+    const textAlign = pen.textAlign || store.options.textAlign;
     pen.calculative.textLines.forEach((text, i) => {
       let x = 0;
-      if (!pen.textAlign || pen.textAlign === 'center') {
+      if (textAlign === 'center') {
         x = (width - pen.calculative.textLineWidths[i]) / 2;
-      } else if (pen.textAlign === 'right') {
+      } else if (textAlign === 'right') {
         x = width - pen.calculative.textLineWidths[i];
       }
       ctx.fillText(
@@ -653,18 +655,19 @@ export function renderPenRaw(ctx: CanvasRenderingContext2D, pen: Pen, rect?: Rec
     if (pen.type === PenType.Line && pen.borderWidth) {
       ctx.save();
       ctx.beginPath();
-      ctx.lineWidth = pen.calculative.lineWidth + pen.calculative.borderWidth;
+      const lineWidth = pen.calculative.lineWidth + pen.calculative.borderWidth;
+      ctx.lineWidth = lineWidth;
       ctx.strokeStyle = pen.borderColor;
       globalStore.path2dDraws[pen.name](pen, ctx);
       fill && ctx.fill();
-      ctx.stroke();
+      lineWidth && ctx.stroke();
       ctx.restore();
     }
     ctx.save();
     ctx.beginPath();
     globalStore.path2dDraws[pen.name](pen, ctx);
     fill && ctx.fill();
-    ctx.stroke();
+    pen.calculative.lineWidth && ctx.stroke();
     ctx.restore();
 
     const progress = pen.calculative.progress || pen.progress;
@@ -758,6 +761,49 @@ export function renderPenRaw(ctx: CanvasRenderingContext2D, pen: Pen, rect?: Rec
     let x = iconRect.x + iconRect.width / 2;
     let y = iconRect.y + iconRect.height / 2;
 
+    switch (pen.iconAlign) {
+      case 'top':
+        y = iconRect.y;
+        ctx.textBaseline = 'top';
+        break;
+      case 'bottom':
+        y = iconRect.ey;
+        ctx.textBaseline = 'bottom';
+        break;
+      case 'left':
+        x = iconRect.x;
+        ctx.textAlign = 'left';
+        break;
+      case 'right':
+        x = iconRect.ex;
+        ctx.textAlign = 'right';
+        break;
+      case 'left-top':
+        x = iconRect.x;
+        y = iconRect.y;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        break;
+      case 'right-top':
+        x = iconRect.ex;
+        y = iconRect.y;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        break;
+      case 'left-bottom':
+        x = iconRect.x;
+        y = iconRect.ey;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        break;
+      case 'right-bottom':
+        x = iconRect.ex;
+        y = iconRect.ey;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        break;
+    }
+
     if (pen.calculative.iconSize > 0) {
       ctx.font = `${pen.calculative.iconSize}px ${pen.calculative.iconFamily}`;
     } else if (iconRect.width > iconRect.height) {
@@ -801,11 +847,12 @@ export function renderPenRaw(ctx: CanvasRenderingContext2D, pen: Pen, rect?: Rec
 
     const y = 0.55;
     const { width } = pen.calculative.textDrawRect;
+    const textAlign = pen.textAlign || store.options.textAlign;
     pen.calculative.textLines.forEach((text, i) => {
       let x = 0;
-      if (!pen.textAlign || pen.textAlign === 'center') {
+      if (textAlign === 'center') {
         x = (width - pen.calculative.textLineWidths[i]) / 2;
-      } else if (pen.textAlign === 'right') {
+      } else if (textAlign === 'right') {
         x = width - pen.calculative.textLineWidths[i];
       }
       ctx.fillText(
@@ -1518,9 +1565,6 @@ export function setLineAnimate(pen: Pen, now: number) {
   if (!pen.calculative.start) {
     pen.calculative.start = Date.now();
     pen.calculative.animatePos = pen.animateSpan;
-    if (!pen.animateColor) {
-      pen.animateColor = '#ff4d4f';
-    }
     pen.calculative.frameIndex = 0;
     pen.calculative.frameStart = pen.calculative.start;
     if (pen.frames && pen.frames.length) {
@@ -1609,7 +1653,7 @@ export function setChildrenActive(pen: Pen, active = true) {
     if (child) {
       child.calculative.active = active;
 
-      setChildrenActive(child);
+      setChildrenActive(child, active);
     }
   });
 }

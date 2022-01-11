@@ -194,6 +194,9 @@ export class Topology {
     this.canvas.sizeCPs = undefined;
 
     if (data) {
+      if (data.paths) {  // 存在 svgPath 存储到 globalStore.paths 中
+        Object.assign(globalStore.paths, data.paths);
+      }
       Object.assign(this.store.data, data);
       this.store.data.pens = [];
       // 第一遍赋初值
@@ -204,10 +207,10 @@ export class Topology {
         !pen.calculative && (pen.calculative = { canvas: this.canvas });
         this.store.pens[pen.id] = pen;
       }
-      // 计算区域
-      for (const pen of data.pens) {
-        this.canvas.dirtyPenRect(pen);
-      }
+      // // 计算区域
+      // for (const pen of data.pens) {
+      //   this.canvas.dirtyPenRect(pen);
+      // }
       for (const pen of data.pens) {
         this.canvas.makePen(pen);
       }
@@ -378,7 +381,7 @@ export class Topology {
   }
 
   setPenRect(pen: Pen, rect: Rect, render = true) {
-    this.setPenRect(pen, rect, render);
+    this.canvas.setPenRect(pen, rect, render);
   }
 
   startAnimate(idOrTagOrPens?: string | Pen[]) {
@@ -567,9 +570,10 @@ export class Topology {
     return getParent(pen, root);
   }
 
-  data() {
-    const data = deepClone(this.store.data);
-    data.version = pkg.version;
+  data(): TopologyData {
+    const data: TopologyData = deepClone(this.store.data);
+    (data as any).version = pkg.version;
+    data.paths = globalStore.paths;
     return data;
   }
 
@@ -808,16 +812,16 @@ export class Topology {
           } else {
             switch (event.where.comparison) {
               case '>':
-                can = pen[event.where.key] > event.where.value;
+                can = pen[event.where.key] > +event.where.value;
                 break;
               case '>=':
-                can = pen[event.where.key] >= event.where.value;
+                can = pen[event.where.key] >= +event.where.value;
                 break;
               case '<':
-                can = pen[event.where.key] < event.where.value;
+                can = pen[event.where.key] < +event.where.value;
                 break;
               case '<=':
-                can = pen[event.where.key] <= event.where.value;
+                can = pen[event.where.key] <= +event.where.value;
                 break;
               case '=':
               case '==':
@@ -1378,6 +1382,19 @@ export class Topology {
     });
 
     return deepClone(pens);
+  }
+
+  setVisible(pen: Pen, visible: boolean) {
+    this.setValue({
+      id: pen.id,
+      visible
+    });
+    if (pen.children) {
+      for (const childId of pen.children) {
+        const child = this.find(childId)[0];
+        child && this.setVisible(child, visible);
+      }
+    }
   }
 
   destroy(global?: boolean) {
