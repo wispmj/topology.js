@@ -2248,7 +2248,7 @@ export class Canvas {
   diffRender(oldRects: Rect[], newRects: Rect[]) {
     // 1. 计算实际需要擦除的 rect ；canvas 没有层的概念，需要计算出受干扰的 pens
     const realPens = this.getDisturbPens(oldRects, newRects, []);
-    console.log('realPens', realPens);
+    // console.log('realPens', realPens);
     // 2. 先后覆盖问题，所以 realPens 中的顺序需要与 store 中相同
     const changedPens = this.orderPens(realPens);
     // 3. 先擦除
@@ -2256,7 +2256,7 @@ export class Canvas {
     ctx.save();
     ctx.translate(this.store.data.x, this.store.data.y);
     // 3.1 oldRects 在 getDisturbPens 方法中已经计算出来了
-    console.log('oldRects', deepClone(oldRects));
+    // console.log('oldRects', deepClone(oldRects));
     for (const oldRect of oldRects) {
       ctx.save();
       ctx.translate(0.5, 0.5);
@@ -3038,8 +3038,8 @@ export class Canvas {
       }
     });
 
-    console.log(oldRects, 'oldRects');
-    console.log(newRects, 'newRects');
+    // console.log(oldRects, 'oldRects');
+    // console.log(newRects, 'newRects');
     
     this.diffRender(oldRects, newRects);
     // this.render(Infinity);
