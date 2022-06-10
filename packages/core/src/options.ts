@@ -1,4 +1,5 @@
-import { Padding } from './utils/padding';
+import { TextAlign, TextBaseline } from './pen';
+import { Point } from './point';
 
 export enum KeydownType {
   None = -1,
@@ -13,17 +14,19 @@ export interface Options {
   hoverColor?: string;
   hoverBackground?: string;
   anchorColor?: string;
+  hoverAnchorColor?: string;
   anchorRadius?: number;
   anchorBackground?: string;
   dockColor?: string;
+  dockPenColor?: string;
   dragColor?: string;
   animateColor?: string;
   textColor?: string;
   fontFamily?: string;
   fontSize?: number;
   lineHeight?: number;
-  textAlign?: string;
-  textBaseline?: string;
+  textAlign?: TextAlign;
+  textBaseline?: TextBaseline;
   rotateCursor?: string;
   hoverCursor?: string;
   disableInput?: boolean;
@@ -62,22 +65,32 @@ export interface Options {
   animateInterval?: number;
   dragAllIn?: boolean;
   scroll?: boolean;
+  uploadFn?: (file: File) => Promise<string>; // uploadFn 优先级最高
+  uploadUrl?: string;
+  uploadParams?: Record<string, any>;
+  uploadHeaders?: Record<string, string>;
+  disableRuleLine?: boolean;
+  ruleLineColor?: string;
+  defaultAnchors?: Point[]; // 图形的默认瞄点
+  measureTextWidth?: boolean; // 测量文字宽度
 }
 
 export const defaultOptions: Options = {
-  textColor: '#222222',
-  fontFamily: '"Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial',
+  fontFamily:
+    '"Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial',
   fontSize: 12,
   lineHeight: 1.5,
   textAlign: 'center',
   textBaseline: 'middle',
   color: '#222222',
-  activeColor: '#1890ff',
-  hoverColor: '#ff7a45',
-  anchorColor: '#fa541c',
+  activeColor: '#278df8',
+  hoverColor: 'rgba(39,141,248,0.50)',
+  anchorColor: '#278DF8',
+  hoverAnchorColor: '#FF4101',
   anchorRadius: 4,
   anchorBackground: '#fff',
-  dockColor: '#fa541c',
+  dockColor: 'rgba(39,141,248,0.50)',
+  dockPenColor: '#1890FF',
   dragColor: '#1890ff',
   rotateCursor: 'rotate.cur',
   hoverCursor: 'pointer',
@@ -93,4 +106,24 @@ export const defaultOptions: Options = {
   autoPolyline: true,
   autoAnchor: true,
   animateColor: '#ff4d4f',
+  ruleLineColor: '#FF4101',
+  defaultAnchors: [
+    {
+      x: 0.5,
+      y: 0,
+    },
+    {
+      x: 1,
+      y: 0.5,
+    },
+    {
+      x: 0.5,
+      y: 1,
+    },
+    {
+      x: 0,
+      y: 0.5,
+    },
+  ],
+  measureTextWidth: true,
 };

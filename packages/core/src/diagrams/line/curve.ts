@@ -1,5 +1,5 @@
 import { Direction } from '../../data';
-import { facePen, Pen } from '../../pen';
+import { facePen, getToAnchor, Pen } from '../../pen';
 import { distance, Point, PrevNextType, rotatePoint } from '../../point';
 import { TopologyStore } from '../../store';
 import { s8 } from '../../utils';
@@ -24,12 +24,14 @@ export function curve(store: TopologyStore, pen: Pen, mousedwon?: Point) {
     if (!from.next) {
       const fromFace = facePen(from, store.pens[from.connectTo]);
       calcCurveCP(from, fromFace, 50);
+      from.prev = undefined;
     }
 
     const to = pen.calculative.worldAnchors[pen.calculative.worldAnchors.length - 1];
     if (to && to !== from && !to.prev) {
       const toFace = facePen(to, store.pens[to.connectTo]);
       calcCurveCP(to, toFace, -50);
+      to.next = undefined;
     }
   }
 }
@@ -134,7 +136,6 @@ export function getSplitAnchor(pen: Pen, pt: Point, index: number) {
     const p7: Point = lerp(p4, p5, t);
     const p8: Point = lerp(p5, p6, t);
     anchor = lerp(p7, p8, t);
-    anchor.penId = pen.id;
     p7.penId = pen.id;
     anchor.prev = p7;
     p8.penId = pen.id;
@@ -143,22 +144,25 @@ export function getSplitAnchor(pen: Pen, pt: Point, index: number) {
     from.next.y = p4.y;
     to.prev.x = p6.x;
     to.prev.y = p6.y;
-  } else {
+  } else if (from.next || to.prev){
     const p0 = from;
-    const p1 = from.next;
+    const p1 = from.next || to.prev;
     const p2 = to;
     const p3: Point = lerp(p0, p1, t);
     const p4: Point = lerp(p1, p2, t);
     anchor = pt;
-    anchor.penId = pen.id;
     p3.penId = pen.id;
     p4.penId = pen.id;
     anchor.prev = p3;
     anchor.next = p4;
     from.next = undefined;
     to.prev = undefined;
+  } else {
+    // 并非贝塞尔点，即 from 和 to 之间是一条直线
+    anchor = pt;
   }
 
+  anchor.penId = pen.id;
   anchor.id = s8();
   anchor.prevNextType = PrevNextType.Bilateral;
   return anchor;
@@ -174,7 +178,7 @@ export function mind(store: TopologyStore, pen: Pen, mousedwon?: Point) {
   }
 
   let from = pen.calculative.activeAnchor;
-  let to = mousedwon || pen.calculative.worldAnchors[pen.calculative.worldAnchors.length - 1];
+  let to = mousedwon || getToAnchor(pen);
   if (!from || !to) {
     return;
   }

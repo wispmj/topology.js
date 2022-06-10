@@ -47,7 +47,7 @@ const onTogglePencil = () => {
   }
   if (isPencilActive.value === true) {
     isPencilActive.value = false;
-    window.topology.finishPencil();
+    window.topology.stopPencil();
   } else {
     isPencilActive.value = true;
     window.topology.drawingPencil();

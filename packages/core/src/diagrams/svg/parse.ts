@@ -35,7 +35,7 @@ const grammar: { [key: string]: RegExp[]; } = {
 
 export function parseSvgPath(path: string): SvgPath {
   let cursor = 0;
-  let commands: any[] = [];
+  const commands: SvgCommand[] = [];
   while (cursor < path.length) {
     const match = path.slice(cursor).match(commandRegex);
     if (match !== null) {
@@ -218,7 +218,7 @@ function parseCommands(type: string, path: string, cursor: number): { cursor: nu
 }
 
 function calcWorldPoints(command: SvgCommand, previous: SvgCommand) {
-  const worldPoints: any[] = [];
+  const worldPoints: number[] = [];
   let current = command.relative && previous ? {
     x: previous.worldPoints[previous.worldPoints.length - 2],
     y: previous.worldPoints[previous.worldPoints.length - 1]

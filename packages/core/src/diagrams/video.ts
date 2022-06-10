@@ -1,14 +1,18 @@
 import { Pen, setElemPosition } from '../pen';
 
-export const videos: any = {};
+export const videos: {
+  [id: string]: HTMLDivElement;
+} = {};
 export function video(pen: Pen) {
-  pen.onDestroy = destory;
-  pen.onMove = move;
-  pen.onResize = move;
-  pen.onRotate = move;
-  pen.onClick = click;
-
-  const worldRect = pen.calculative.worldRect;
+  if (!pen.onDestroy) {
+    pen.onDestroy = destory;
+    pen.onMove = move;
+    pen.onResize = move;
+    pen.onRotate = move;
+    pen.onClick = click;
+    pen.onValue = move;
+    pen.onChangeId = changeId;
+  }
 
   if (!videos[pen.id]) {
     const player = document.createElement('div');
@@ -34,20 +38,10 @@ export function video(pen: Pen) {
     }
     media.loop = pen.playLoop;
     media.ontimeupdate = () => {
-      // worldRect 会重新赋值，而 pen 不会变，这里才能取到实时的 worldRect
-      progress.style.width = (media.currentTime / media.duration) * pen.calculative.worldRect.width + 'px';
+      resizeProcessWidth(progress, media, pen.calculative.worldRect.width);
     };
     media.onended = () => {
       pen.calculative.onended && pen.calculative.onended(pen);
-    };
-    // TODO: 调整 muted ，自动播放需要先静音
-    media.onclick= () => {
-      media.muted = false;
-      if (media.paused) {
-        media.play();
-      } else {
-        media.pause();
-      }
     };
     pen.calculative.media = media;
     media.style.position = 'absolute';
@@ -58,25 +52,36 @@ export function video(pen: Pen) {
     media.style.height = '100%';
     player.appendChild(media);
     videos[pen.id] = player;
-    pen.calculative.canvas.externalElements && pen.calculative.canvas.externalElements.appendChild(player);
+    pen.calculative.canvas.externalElements &&
+      pen.calculative.canvas.externalElements.appendChild(player);
     setElemPosition(pen, player);
     if (pen.autoPlay) {
       media.autoplay = true;
-      media.muted = true; 
+      media.muted = true;
     }
-  } else if (pen.video && pen.calculative.media && pen.video !== pen.calculative.video) {
+  } else if (
+    pen.video &&
+    pen.calculative.media &&
+    pen.video !== pen.calculative.video
+  ) {
     pen.calculative.media.src = pen.video;
     if (pen.autoPlay) {
-      pen.calculative.media.muted = true; 
+      pen.calculative.media.muted = true;
       pen.calculative.media.autoplay = true;
     }
+    pen.calculative.media.loop = pen.playLoop;
     pen.calculative.video = pen.video;
-  } else if (pen.audio && pen.calculative.media && pen.audio !== pen.calculative.audio) {
+  } else if (
+    pen.audio &&
+    pen.calculative.media &&
+    pen.audio !== pen.calculative.audio
+  ) {
     pen.calculative.media.src = pen.audio;
     if (pen.autoPlay) {
-      pen.calculative.media.muted = true; 
+      pen.calculative.media.muted = true;
       pen.calculative.media.autoplay = true;
     }
+    pen.calculative.media.loop = pen.playLoop;
     pen.calculative.audio = pen.audio;
   }
   if (pen.calculative.dirty) {
@@ -92,6 +97,9 @@ function destory(pen: Pen) {
 
 function move(pen: Pen) {
   setElemPosition(pen, videos[pen.id]);
+  const progress = videos[pen.id].children[0];
+  const media = videos[pen.id].children[1];
+  resizeProcessWidth(progress as HTMLDivElement, media as HTMLMediaElement, pen.calculative.worldRect.width);
 }
 
 function click(pen: Pen) {
@@ -103,4 +111,20 @@ function click(pen: Pen) {
       pen.calculative.media.pause();
     }
   }
+}
+function resizeProcessWidth(
+  progress: HTMLDivElement,
+  media: HTMLMediaElement,
+  width: number
+) {
+  // worldRect 会重新赋值，而 pen 不会变，这里才能取到实时的 worldRect
+  progress.style.width = (media.currentTime / media.duration) * width + 'px';
+}
+
+function changeId(pen: Pen, oldId: string, newId: string) {
+  if (!videos[oldId]) {
+    return;
+  }
+  videos[newId] = videos[oldId];
+  delete videos[oldId];
 }

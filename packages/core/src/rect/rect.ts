@@ -1,5 +1,6 @@
-import { Pen } from '../pen';
+import { isEqual, Pen } from '../pen';
 import { Point, rotatePoint, scalePoint } from '../point';
+import { formatPadding, Padding } from '../utils';
 
 export interface Rect {
   x?: number;
@@ -17,8 +18,7 @@ export function pointInRect(pt: Point, rect: Rect) {
     return;
   }
   if (rect.ex == null) {
-    rect.ex = rect.x + rect.width;
-    rect.ey = rect.y + rect.height;
+    calcExy(rect);
   }
 
   if (!rect.rotate || rect.width < 20 || rect.height < 20 || rect.rotate % 360 === 0) {
@@ -55,6 +55,11 @@ export function calcCenter(rect: Rect) {
   rect.center.y = rect.y + rect.height / 2;
 }
 
+export function calcExy(rect: Rect) {
+  rect.ex = rect.x + rect.width;
+  rect.ey = rect.y + rect.height;
+}
+
 export function pointInVertices(point: { x: number; y: number }, vertices: Point[]): boolean {
   if (vertices.length < 3) {
     return false;
@@ -77,6 +82,9 @@ export function pointInVertices(point: { x: number; y: number }, vertices: Point
 export function getRect(pens: Pen[]): Rect {
   const points: Point[] = [];
   pens.forEach((pen) => {
+    if (pen.isRuleLine) {
+      return;
+    }
     const rect = pen.calculative.worldRect;
     if (rect) {
       const pts = rectToPoints(rect);
@@ -116,11 +124,17 @@ export function getRectOfPoints(points: Point[]): Rect {
   let ey = -Infinity;
 
   points.forEach((item) => {
+    if (!isFinite(item.x) || !isFinite(item.y)) {
+      return;
+    }
     x = Math.min(x, item.x);
     y = Math.min(y, item.y);
     ex = Math.max(ex, item.x);
     ey = Math.max(ey, item.y);
   });
+  if (!isFinite(x)) {
+    console.error('getRectOfPoints 非法的 points', points);
+  }
   return { x, y, ex, ey, width: ex - x, height: ey - y };
 }
 
@@ -133,6 +147,30 @@ export function rectInRect(source: Rect, target: Rect, allIn?: boolean) {
     return source.x > target.x && source.ex < target.ex && source.y > target.y && source.ey < target.ey;
   }
   return !(source.x > target.ex || source.ex < target.x || source.ey < target.y || source.y > target.ey);
+}
+
+/**
+ * 一个 rect 在另一个 rect 的 四个角，即水平区域不重合，垂直区域不重合
+ */
+export function rectInFourAngRect(source: Rect, target: Rect) {
+  return (target.x > source.ex || target.ex < source.x) && (target.y > source.ey || target.ey < source.y);
+}
+
+/**
+ * 扩大 rect ，x，y，ex，ey 值都会变
+ * @param rect 原 rect ，无副作用
+ * @param size padding 类型，可传四个方向的值，也可以只传一个值
+ */
+export function getLargerRect(rect: Rect, size: Padding): Rect {
+  const padding = formatPadding(size);
+  const retRect = {
+    x: rect.x - padding[3],
+    y: rect.y - padding[0],
+    width: rect.width + padding[1] + padding[3],
+    height: rect.height + padding[0] + padding[2],
+  };
+  calcExy(retRect);
+  return retRect;
 }
 
 export function translateRect(rect: Rect | Pen, x: number, y: number) {
@@ -175,12 +213,12 @@ function getIntersectPoint(line1: {from: Point, to: Point}, line2: {from: Point,
  * @returns 
  */
 function getIntersectPointByK(line1: {k: number, point: Point}, line2: {k: number, point: Point}): Point {
-  if (isZero(line1.k)) {
+  if (isEqual(line1.k, 0)) {
     return {
       x: line2.point.x,
       y: line1.point.y
     }
-  } else if (isZero(line2.k)) {
+  } else if (isEqual(line2.k, 0)) {
     return {
       x: line1.point.x,
       y: line2.point.y
@@ -222,15 +260,6 @@ function pointsToRect(pts: Point[], rotate: number): Rect {
   return getRectOfPoints(pts);
 }
 
-/**
- * js 计算存在误差，认为 num 在该范围内的值就是 0
- * @param num 数字
- * @returns 是否接近 0
- */
-function isZero(num: number) : boolean {
-  return num > -0.000000001 && num < 0.000000001;
-}
-
 export function resizeRect(rect: Rect | Pen, offsetX: number, offsetY: number, resizeIndex: number) {
   if (rect.rotate && rect.rotate % 360) {
     // 计算出外边的四个点
@@ -250,7 +279,7 @@ export function resizeRect(rect: Rect | Pen, offsetX: number, offsetY: number, r
     } else { 
       // 边缘四个点有两个点固定
       const k = [4, 6].includes(resizeIndex) ? k2 : k1;
-      if (!isZero(k)) {
+      if (!isEqual(k, 0)) {
         pts[(resizeIndex) % 4].y += offsetY;
         pts[(resizeIndex) % 4].x += offsetY / k;
         pts[(resizeIndex + 1) % 4].y += offsetY;
@@ -346,12 +375,8 @@ export function scaleRect(rect: Rect, scale: number, center: Point) {
   rect.height *= scale;
   scalePoint(rect as Point, scale, center);
 
-  rect.ex = rect.x + rect.width;
-  rect.ey = rect.y + rect.height;
-  rect.center = {
-    x: rect.x + rect.width / 2,
-    y: rect.y + rect.height / 2,
-  };
+  calcExy(rect);
+  calcCenter(rect);
 }
 
 export function calcRelativeRect(rect: Rect, worldRect: Rect) {
@@ -361,36 +386,44 @@ export function calcRelativeRect(rect: Rect, worldRect: Rect) {
     width: rect.width / worldRect.width,
     height: rect.height / worldRect.height,
   };
-  relRect.ex = relRect.x + relRect.width;
-  relRect.ey = relRect.y + relRect.height;
+  calcExy(relRect);
 
   return relRect;
 }
 
+/**
+ * 计算相对点 ，anchors 中的值都是百分比
+ * @param pt 绝对坐标
+ * @param worldRect 图形外接矩形
+ * @returns 相对坐标点
+ */
 export function calcRelativePoint(pt: Point, worldRect: Rect) {
+  const { x, y, width, height } = worldRect;
+  const { id, penId, connectTo, anchorId, prevNextType, hidden } = pt;
   const point: Point = {
-    id: pt.id,
-    penId: pt.penId,
-    connectTo: pt.connectTo,
-    x: worldRect.width ? (pt.x - worldRect.x) / worldRect.width : 0,
-    y: worldRect.height ? (pt.y - worldRect.y) / worldRect.height : 0,
-    anchorId: pt.anchorId,
-    prevNextType: pt.prevNextType,
+    id,
+    penId,
+    connectTo,
+    x: width ? (pt.x - x) / width : 0,
+    y: height ? (pt.y - y) / height : 0,
+    anchorId,
+    prevNextType,
+    hidden,
   };
   if (pt.prev) {
     point.prev = {
-      penId: pt.penId,
-      connectTo: pt.connectTo,
-      x: worldRect.width ? (pt.prev.x - worldRect.x) / worldRect.width : 0,
-      y: worldRect.height ? (pt.prev.y - worldRect.y) / worldRect.height : 0,
+      penId,
+      connectTo,
+      x: width ? (pt.prev.x - x) / width : 0,
+      y: height ? (pt.prev.y - y) / height : 0,
     };
   }
   if (pt.next) {
     point.next = {
-      penId: pt.penId,
-      connectTo: pt.connectTo,
-      x: worldRect.width ? (pt.next.x - worldRect.x) / worldRect.width : 0,
-      y: worldRect.height ? (pt.next.y - worldRect.y) / worldRect.height : 0,
+      penId,
+      connectTo,
+      x: width ? (pt.next.x - x) / width : 0,
+      y: height ? (pt.next.y - y) / height : 0,
     };
   }
   return point;

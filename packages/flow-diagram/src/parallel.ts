@@ -1,35 +1,33 @@
 import { Point } from '@topology/core';
 import { Pen } from '../../core/src/pen';
-export function flowParallel(
-  pen: Pen,
-  path?: CanvasRenderingContext2D | Path2D
-) {
-  if (!path) {
-    path = new Path2D();
-  }
+export function flowParallel(pen: Pen, ctx?: CanvasRenderingContext2D): Path2D {
+  const path = !ctx ? new Path2D() : ctx;
+  const { x, y, ex, ey } = pen.calculative.worldRect;
 
-  path.moveTo(pen.calculative.worldRect.x, pen.calculative.worldRect.y);
-  path.lineTo(pen.calculative.worldRect.ex, pen.calculative.worldRect.y);
-  path.moveTo(pen.calculative.worldRect.x, pen.calculative.worldRect.ey);
-  path.lineTo(pen.calculative.worldRect.ex, pen.calculative.worldRect.ey);
-
-  return path;
+  path.moveTo(x, y);
+  path.lineTo(ex, y);
+  path.moveTo(x, ey);
+  path.lineTo(ex, ey);
+  if (path instanceof Path2D) return path;
 }
 
 export function flowParallelAnchors(pen: Pen) {
-  const anchors: Point[] = [];
-  anchors.push({
-    id: '0',
-    penId: pen.id,
-    x: 0.5,
-    y: 0,
+  const points = [
+    {
+      x: 0.5,
+      y: 0,
+    },
+    {
+      x: 0.5,
+      y: 1,
+    },
+  ] as const;
+  pen.anchors = points.map(({ x, y }, index) => {
+    return {
+      id: index + '',
+      x,
+      y,
+      penId: pen.id,
+    };
   });
-
-  anchors.push({
-    id: '1',
-    penId: pen.id,
-    x: 0.5,
-    y: 1,
-  });
-  pen.anchors = anchors;
 }

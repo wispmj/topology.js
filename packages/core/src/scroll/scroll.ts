@@ -91,7 +91,6 @@ export class Scroll {
       this.scrollX = this.lastScrollX + x;
       this.h.style.left = `${this.scrollX}px`;
       this.parent.store.data.x = this.x - (x * this.rect.width) / this.parent.parentElement.clientWidth;
-      this.parent.dirty = true;
     }
 
     if (this.isDownV) {
@@ -99,12 +98,13 @@ export class Scroll {
       this.scrollY = this.lastScrollY + y;
       this.v.style.top = `${this.scrollY}px`;
       this.parent.store.data.y = this.y - (y * this.rect.height) / this.parent.parentElement.clientHeight;
-      this.parent.dirty = true;
     }
 
     if (this.isDownH || this.isDownV) {
+      this.parent.onMovePens();
+      this.parent.canvasImage.initStatus();
+      this.parent.canvasImageBottom.initStatus();
       this.parent.render();
-      this.movePens();
     }
 
   };
@@ -213,20 +213,9 @@ export class Scroll {
     this.scrollY += y;
     this.v.style.top = `${this.scrollY}px`;
     this.parent.store.data.y -= (y * this.rect.height) / this.parent.parentElement.clientHeight;
-    this.parent.dirty = true;
 
+    this.parent.onMovePens();
     this.parent.render();
-    this.movePens();
-  }
-
-  /**
-   * translate 后，dom 类型画笔需要随之移动
-   */
-  movePens() {
-    // 有移动操作的 画笔 需要执行移动
-    for (const pen of this.parent.store.data.pens) {
-      pen.onMove && pen.onMove(pen);
-    }
   }
 
   destroy() {

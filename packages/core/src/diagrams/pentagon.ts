@@ -1,69 +1,48 @@
 import { Pen } from '../pen';
 import { Point } from '../point';
-export function pentagon(pen: Pen, path?: CanvasRenderingContext2D | Path2D) {
-  if (!path) {
-    path = new Path2D();
-  }
+export function pentagon(pen: Pen, ctx?: CanvasRenderingContext2D): Path2D {
+  const path = !ctx ? new Path2D() : ctx;
+  const { x, y, width, height } = pen.calculative.worldRect;
 
-  path.moveTo(
-    pen.calculative.worldRect.x + pen.calculative.worldRect.width / 2,
-    pen.calculative.worldRect.y
-  );
-  path.lineTo(
-    pen.calculative.worldRect.x + pen.calculative.worldRect.width,
-    pen.calculative.worldRect.y + (pen.calculative.worldRect.height * 2) / 5
-  );
-  path.lineTo(
-    pen.calculative.worldRect.x + (pen.calculative.worldRect.width * 4) / 5,
-    pen.calculative.worldRect.y + pen.calculative.worldRect.height
-  );
-  path.lineTo(
-    pen.calculative.worldRect.x + pen.calculative.worldRect.width / 5,
-    pen.calculative.worldRect.y + pen.calculative.worldRect.height
-  );
-  path.lineTo(
-    pen.calculative.worldRect.x,
-    pen.calculative.worldRect.y + (pen.calculative.worldRect.height * 2) / 5
-  );
+  path.moveTo(x + width / 2, y);
+  path.lineTo(x + width, y + (height * 2) / 5);
+  path.lineTo(x + (width * 4) / 5, y + height);
+  path.lineTo(x + width / 5, y + height);
+  path.lineTo(x, y + (height * 2) / 5);
 
   path.closePath();
-
-  return path;
+  if (path instanceof Path2D) return path;
 }
 
 export function pentagonAnchors(pen: Pen) {
-  const anchors: Point[] = [];
-  anchors.push({
-    id: '0',
-    penId: pen.id,
-    x: 0.5,
-    y: 0,
+  const points = [
+    {
+      x: 0.5,
+      y: 0,
+    },
+    {
+      x: 1,
+      y: 0.4,
+    },
+    {
+      x: 0.8,
+      y: 1,
+    },
+    {
+      x: 0.2,
+      y: 1,
+    },
+    {
+      x: 0,
+      y: 0.4,
+    },
+  ] as const;
+  pen.anchors = points.map(({ x, y }, index) => {
+    return {
+      id: `${index}`,
+      penId: pen.id,
+      x,
+      y,
+    };
   });
-
-  anchors.push({
-    id: '1',
-    penId: pen.id,
-    x: 1,
-    y: 0.4,
-  });
-
-  anchors.push({
-    id: '2',
-    penId: pen.id,
-    x: 0.8,
-    y: 1,
-  });
-  anchors.push({
-    id: '3',
-    penId: pen.id,
-    x: 0.2,
-    y: 1,
-  });
-  anchors.push({
-    id: '4',
-    penId: pen.id,
-    x: 0,
-    y: 0.4,
-  });
-  pen.anchors = anchors;
 }
