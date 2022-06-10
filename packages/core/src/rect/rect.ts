@@ -439,16 +439,16 @@ export function calcRelativePoint(pt: Point, worldRect: Rect) {
 export function calcEyeRect(rect: Rect, lineWidth: number) {
   // 与 dpiRatio 无关，偶尔计算错误，暂时不知道为什么
   // 稍微多计算一点，可能消耗更多的绘制性能
-  const offset = 0;
+  const isDouble = !(lineWidth % 2);
+  const offset = 10;
   const realRect: Rect = {
-    x: rect.x - 1 * lineWidth / 2 - offset / 2,
-    y: rect.y - 1 * lineWidth / 2 - offset / 2,
-    width: rect.width + lineWidth * 1 + offset,
-    height: rect.height + lineWidth * 1 + offset,
+    x: rect.x - 1 * lineWidth / 2 - (!isDouble && 0.5) - offset / 2,
+    y: rect.y - 1 * lineWidth / 2 - (!isDouble && 0.5) - offset / 2,
+    width: rect.width + lineWidth * 1 + (!isDouble && 1) + offset,
+    height: rect.height + lineWidth * 1 + (!isDouble && 1) + offset,
     rotate: rect.rotate
   };
   calcCenter(realRect);
-  realRect.ex = realRect.x + realRect.width;
-  realRect.ey = realRect.y + realRect.height;
+  calcExy(realRect);
   return realRect;
 }
