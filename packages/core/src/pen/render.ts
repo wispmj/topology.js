@@ -407,7 +407,8 @@ export function ctxRotate(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderi
   // 目前只有水平和垂直翻转，都需要 * -1
   if (pen.calculative.flipX) {
     rotate *= -1;
-  } else if (pen.calculative.flipY) {
+  } 
+  if (pen.calculative.flipY) {
     rotate *= -1;
   }
   ctx.rotate(rotate);
