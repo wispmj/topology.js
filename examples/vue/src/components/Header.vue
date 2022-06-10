@@ -35,6 +35,38 @@ const onSave = () => {
   a.dataset.downloadurl = ["text/json", a.download, a.href].join(":");
   a.click();
 };
+const onCombine=()=>{
+  var pens = window.topology.store.active;
+  if(pens !== null && pens.length>1){
+    window.topology.combine(window.topology.store.active);
+  }
+};
+
+const onCancelCombine=()=>{
+  var pens = window.topology.store.active;
+  if(pens !== null && pens.length>0){
+    window.topology.uncombine(window.topology.store.active[0]);
+  }
+}
+
+const onFlipX=()=>{
+  var pens = window.topology.store.active;
+  if(pens !== null && pens.length>0){
+    pens.forEach(pen => {
+      window.topology.setValue({"id":pen.id,"flipX":!pen.flipX});
+    });
+  }
+};
+
+const onFlipY=()=>{
+  var pens = window.topology.store.active;
+  if(pens !== null && pens.length>0){
+    pens.forEach(pen => {
+      window.topology.setValue({"id":pen.id,"flipY":!pen.flipY});
+    });
+  }
+};
+
 const onTogglePen = () => {
   isPencilActive.value = false;
   window.topology.finishPencil();
@@ -139,6 +171,10 @@ onUnmounted(() => {
       <button id="pencil" :class="{ active: isPencilActive }" @click="onTogglePencil">铅笔</button>
       <button id="magnifier" :class="{ active: isMagnifierActive }" @click="onToggleMagnifier">放大镜</button>
       <button id="minimap" :class="{ active: isMinimapActive }" @click="onToggleMinimap">缩略图</button>
+      <button id="btnCombine" @click="onCombine">组合</button>
+      <button id="btnCombine" @click="onCancelCombine">取消组合</button>
+      <button id="btnCombine" @click="onFlipX">水平翻转</button>
+      <button id="btnCombine" @click="onFlipY">垂直翻转</button>
       <button id="help" @click="onHelp">帮助</button>
     </div>
   </div>

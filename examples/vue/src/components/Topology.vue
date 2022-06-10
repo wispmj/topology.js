@@ -7,9 +7,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 // 测试本地使用
-// import { Topology } from "../../../../packages/core";
+import { Pen, Topology } from "../../../../packages/core";
 import { register as registerEcharts } from "@topology/chart-diagram";
-import { Pen, Topology } from "@topology/core";
+// import { Pen, Topology } from "@topology/core";
 
 onMounted(() => {
   const topology = new Topology("topology");
