@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>菜鸟教程(runoob.com)</title>
+</head>
+
+<body>
+
+    <canvas id="myCanvas" width="800" height="800" style="border:1px solid #d3d3d3;">
+您的浏览器不支持 HTML5 canvas 标签。
+</canvas>
+    <script>
+        var rect = {
+            x: 200,
+            y: 200,
+            ex: 300,
+            ey: 500,
+            width: 100,
+            height: 300,
+            cx: 250,
+            cy: 350,
+        }
+
+        var rotateAngle = 30;
+
+        var c = document.getElementById("myCanvas");
+        var ctx = c.getContext("2d");
+        // 红色矩形
+        ctx.beginPath();
+        ctx.strokeStyle = "blue";
+        ctx.rect(rect.x, rect.y, rect.width, rect.height);
+        ctx.stroke();
+
+        //中间线
+        ctx.beginPath();
+        ctx.strokeStyle = "black";
+        ctx.setLineDash([5, 10]);
+        ctx.moveTo(0, rect.cy);
+        ctx.lineTo(rect.x * 2 + rect.width, rect.cy);
+        ctx.moveTo(rect.cx, 0);
+        ctx.lineTo(rect.cx, rect.y * 2 + rect.height);
+        ctx.stroke();
+        ctx.save();
+
+        ctx.restore();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        rotate(ctx, rotateAngle, rect.cx, rect.cy, rect.x, rect.y);
+        ctx.translate(rect.x + rect.ex, 0);
+        ctx.scale(-1, 1);
+        ctx.strokeStyle = "red";
+        ctx.rect(rect.x, rect.y, rect.width, rect.height);
+        ctx.stroke();
+
+        function rotate(ctx, ang, cx, cy, x, y) {
+            ctx.translate(cx, cy);
+            ctx.rotate(Math.PI * ang / 180);
+            ctx.translate(-cx, -cy);
+        }
+    </script>
+
+</body>
+
+</html>
