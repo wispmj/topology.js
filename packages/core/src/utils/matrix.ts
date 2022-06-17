@@ -51,10 +51,23 @@ class Flip implements Operation {
 
 class Scale extends Vector implements Operation {
     name: string = "scale";
+
+    origin:Point;
     x: number;
     y: number;
 }
 
+class TransformClass {
+    angle: number;
+    scaleX: number;
+    scaleY: number;
+    flipX: boolean;
+    flipY: boolean;
+    skewX: number;
+    skewY: number;
+    translateX: number;
+    translateY: number;
+}
 /**
  * Transforms degrees to radians.
  * @param  degrees value in degrees
@@ -154,10 +167,12 @@ export function transformPoint(p: Point, t: number[], ignoreOffset: boolean): Po
             t[1] * p.x + t[3] * p.y
         );
     }
-    return new Point(
-        t[0] * p.x + t[2] * p.y + t[4],
-        t[1] * p.x + t[3] * p.y + t[5]
-    );
+    else {
+        return new Point(
+            t[0] * p.x + t[2] * p.y + t[4],
+            t[1] * p.x + t[3] * p.y + t[5]
+        );
+    }
 }
 
 /**
@@ -184,32 +199,32 @@ export function multiplyTransformMatrices(a: number[], b: number[], is2x2: boole
  * @param  {Array} a transformMatrix
  * @return {Object} Components of transform
  */
-export function qrDecompose(a) {
-    // var angle = atan2(a[1], a[0]),
-    //     denom = pow(a[0], 2) + pow(a[1], 2),
-    //     scaleX = sqrt(denom),
-    //     scaleY = (a[0] * a[3] - a[2] * a[1]) / scaleX,
-    //     skewX = atan2(a[0] * a[2] + a[1] * a [3], denom);
-    // return {
-    //   angle: angle / PiBy180,
-    //   scaleX: scaleX,
-    //   scaleY: scaleY,
-    //   skewX: skewX / PiBy180,
-    //   skewY: 0,
-    //   translateX: a[4],
-    //   translateY: a[5]
-    // };
+export function qrDecompose(a: number[]): TransformClass {
+    let angle = Math.atan2(a[1], a[0]),
+        denom = Math.pow(a[0], 2) + Math.pow(a[1], 2),
+        scaleX = Math.sqrt(denom),
+        scaleY = (a[0] * a[3] - a[2] * a[1]) / scaleX,
+        skewX = Math.atan2(a[0] * a[2] + a[1] * a[3], denom);
+    let transform = new TransformClass();
+    transform.angle = angle * 180 / Math.PI;
+    transform.scaleX = scaleX;
+    transform.scaleY = scaleY;
+    transform.skewX = skewX * 180 / Math.PI;
+    transform.skewY = 0;
+    transform.translateX = a[4];
+    transform.translateY = a[5];
+    return transform;
 }
 
 /**
  * Returns a transform matrix starting from an object of the same kind of
  * the one returned from qrDecompose, useful also if you want to calculate some
  * transformations from an object that is not enlived yet
- * @param  {Object} options
+ * @param  {TransformClass} options
  * @param  {Number} [options.angle] angle in degrees
  * @return {Number[]} transform matrix
  */
-export function calcRotateMatrix(options): number[] {
+export function calcRotateMatrix(options: TransformClass): number[] {
     var iMatrix = [1, 0, 0, 1, 0, 0];
     if (!options.angle) {
         return iMatrix;
@@ -226,16 +241,10 @@ export function calcRotateMatrix(options): number[] {
  * transformations from an object that is not enlived yet.
  * is called DimensionsTransformMatrix because those properties are the one that influence
  * the size of the resulting box of the object.
- * @param  {Object} options
- * @param  {Number} [options.scaleX]
- * @param  {Number} [options.scaleY]
- * @param  {Boolean} [options.flipX]
- * @param  {Boolean} [options.flipY]
- * @param  {Number} [options.skewX]
- * @param  {Number} [options.skewY]
+ * @param  {TransformClass} options
  * @return {Number[]} transform matrix
  */
-export function calcDimensionsMatrix(options): number[] {
+export function calcDimensionsMatrix(options: TransformClass): number[] {
     var scaleX = typeof options.scaleX === 'undefined' ? 1 : options.scaleX,
         scaleY = typeof options.scaleY === 'undefined' ? 1 : options.scaleY,
         scaleMatrix = [
@@ -267,18 +276,9 @@ export function calcDimensionsMatrix(options): number[] {
  * the one returned from qrDecompose, useful also if you want to calculate some
  * transformations from an object that is not enlived yet
  * @param  {Object} options
- * @param  {Number} [options.angle]
- * @param  {Number} [options.scaleX]
- * @param  {Number} [options.scaleY]
- * @param  {Boolean} [options.flipX]
- * @param  {Boolean} [options.flipY]
- * @param  {Number} [options.skewX]
- * @param  {Number} [options.skewX]
- * @param  {Number} [options.translateX]
- * @param  {Number} [options.translateY]
  * @return {Number[]} transform matrix
  */
-export function composeMatrix(options): number[] {
+export function composeMatrix(options: TransformClass): number[] {
     var matrix = [1, 0, 0, 1, options.translateX || 0, options.translateY || 0],
         multiply = multiplyTransformMatrices;
     if (options.angle) {
@@ -293,21 +293,21 @@ export function composeMatrix(options): number[] {
 
 /**
  * reset an object transform state to neutral. Top and left are not accounted for
- * @param  {fabric.Object} target object to transform
+ * @param  {Object} target object to transform
  */
 export function resetObjectTransform(target) {
-    // target.scaleX = 1;
-    // target.scaleY = 1;
-    // target.skewX = 0;
-    // target.skewY = 0;
-    // target.flipX = false;
-    // target.flipY = false;
-    // target.rotate(0);
+    target.scaleX = 1;
+    target.scaleY = 1;
+    target.skewX = 0;
+    target.skewY = 0;
+    target.flipX = false;
+    target.flipY = false;
+    target.rotate(0);
 }
 
 /**
  * Extract Object transform values
- * @param  {fabric.Object} target object to read from
+ * @param  {Object} target object to read from
  * @return {Object} Components of transform
  */
 export function saveObjectTransform(target) {
@@ -322,4 +322,10 @@ export function saveObjectTransform(target) {
         flipY: target.flipY,
         top: target.top
     };
+}
+
+export function composeOperations(ops : Operation[]):number[]{
+
+return [];
+
 }
