@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <title>菜鸟教程(runoob.com)</title>
-    <script type="text/javascript" src="../vue/src/lib/fabric.js"></script>
+    <script type="text/javascript" src="../lib/fabric.js"></script>
 </head>
 
 <body>
@@ -82,10 +82,21 @@
 
         }
 
+
+
+
         function draw2(rect) {
+            debugger;
+            var ori = new fabric.Point(o2.x,o2.y);
+            var pt = new fabric.Point(rect2.cx,rect2.cy);
+            var pt1 = window.fabric.util.rotatePoint(pt,ori,rotateAngle);
+
 
 
         }
+
+
+
 
         function rotate(ctx, ang, cx, cy, x, y) {
             ctx.translate(cx, cy);
@@ -94,6 +105,8 @@
         }
 
         draw1(rect2);
+
+        draw2(rect2);
     </script>
 
 </body>
