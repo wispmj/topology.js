@@ -802,6 +802,7 @@ fabric.CommonMethods = {
     },
 
     /**
+     * 
      * @static
      * @memberOf fabric.util
      * @param {Point} A
