@@ -1,117 +1,236 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>菜鸟教程(runoob.com)</title>
-    <script type="text/javascript" src="../lib/fabric.js"></script>
-  </head>
 
-  <body>
-    <canvas
-      id="myCanvas"
-      width="1800"
-      height="1800"
-      style="border: 1px solid #d3d3d3"
-    >
+<head>
+    <meta charset="utf-8" />
+    <title>测试1</title>
+    <script type="text/javascript" src="../lib/fabric.js"></script>
+</head>
+
+<body>
+    <canvas id="myCanvas" width="1800" height="1800" style="border: 1px solid #d3d3d3; margin: 50px;">
       您的浏览器不支持 HTML5 canvas 标签。
     </canvas>
     <script>
-      var rect1 = {
-        x: 200,
-        y: 200,
-        ex: 300,
-        ey: 500,
-        width: 100,
-        height: 300,
-        cx: 250,
-        cy: 350,
-      };
+        var rect1 = {
+            x: 200,
+            y: 200,
+            ex: 300,
+            ey: 500,
+            width: 100,
+            height: 300,
+            cx: 250,
+            cy: 350,
+        };
 
-      var rect2 = {
-        x: 400,
-        y: 400,
-        ex: 500,
-        ey: 700,
-        width: 100,
-        height: 300,
-        cx: 450,
-        cy: 550,
-      };
+        var rect2 = {
+            x: 400,
+            y: 400,
+            ex: 500,
+            ey: 700,
+            width: 100,
+            height: 300,
+            cx: 450,
+            cy: 550,
+        };
 
-      var o2 = {
-        x: 300,
-        y: 400,
-      };
+        var o2 = {
+            x: 300,
+            y: 400,
+        };
 
-      var rotateAngle = 30;
+        var rotateAngle = 30;
 
-      var c = document.getElementById("myCanvas");
-      var ctx = c.getContext("2d");
+        var c = document.getElementById("myCanvas");
+        var ctx = c.getContext("2d");
 
-      function draw1(rect) {
-        // 红色矩形
-        ctx.beginPath();
-        ctx.strokeStyle = "blue";
-        ctx.rect(rect.x, rect.y, rect.width, rect.height);
-        ctx.stroke();
+        function draw1(rect) {
+            // 红色矩形
+            ctx.beginPath();
+            ctx.strokeStyle = "blue";
+            ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            ctx.stroke();
 
-        ctx.beginPath();
-        ctx.moveTo(300, 400);
-        ctx.arc(300, 400, 5, 0, Math.PI * 2, true);
-        ctx.fill();
-        ctx.stroke();
-        //中间线
-        ctx.beginPath();
-        ctx.strokeStyle = "black";
-        ctx.setLineDash([5, 10]);
-        ctx.moveTo(0, rect.cy);
-        ctx.lineTo(rect.x * 2 + rect.width, rect.cy);
-        ctx.moveTo(rect.cx, 0);
-        ctx.lineTo(rect.cx, rect.y * 2 + rect.height);
-        ctx.stroke();
-        ctx.save();
+            ctx.beginPath();
+            drawPoint(300, 400, "red");
+            ctx.stroke();
+            //中间线
+            ctx.beginPath();
+            ctx.strokeStyle = "black";
+            ctx.setLineDash([5, 10]);
+            ctx.moveTo(0, rect.cy);
+            ctx.lineTo(rect.x * 2 + rect.width, rect.cy);
+            ctx.moveTo(rect.cx, 0);
+            ctx.lineTo(rect.cx, rect.y * 2 + rect.height);
+            ctx.stroke();
+            // ctx.save();
 
-        ctx.restore();
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        rotate(ctx, -rotateAngle, rect.cx, rect.cy, rect.x, rect.y);
-        ctx.translate(0, rect.y + rect.ey);
-        ctx.scale(1, -1);
-        ctx.strokeStyle = "red";
-        ctx.rect(rect.x, rect.y, rect.width, rect.height);
-        ctx.stroke();
-      }
+            // ctx.restore();
+            // ctx.setLineDash([]);
+            // ctx.beginPath();
+            // rotate(rotateAngle, rect.cx, rect.cy, rect.x, rect.y);
+            // ctx.translate(0, rect.y + rect.ey);
+            // // ctx.scale(1, -1);
+            // ctx.strokeStyle = "red";
+            // ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            // ctx.stroke();
+        }
 
-      function draw2(rect) {
-        debugger;
-        ctx.restore();
+        function draw2(rect) {
+            ctx.restore();
+            // drawPoint(10, 100, "blue");
 
-        ctx.beginPath();
-        ctx.strokeStyle = "green";
+            ctx.beginPath();
+            ctx.strokeStyle = "green";
+            var ori = new fabric.Point(o2.x, o2.y);
+            var pt = new fabric.Point(rect2.cx, rect2.cy);
+            var pt1 = window.fabric.util.rotatePoint(pt, ori, rotateAngle / 180 * Math.PI);
+            drawPoint(pt.x, pt.y, "blue");
+            var vector = new fabric.Point(rect2.cx - o2.x, rect2.cy - o2.y);
+            drawPoint(vector.x, vector.y, "blue");
 
-        var ori = new fabric.Point(o2.x, o2.y);
-        var pt = new fabric.Point(rect2.cx, rect2.cy);
-        // var pt1 = window.fabric.util.rotatePoint(pt,ori,rotateAngle);
+            drawPoint(pt1.x, pt1.y);
 
-        var vector = new fabric.Point(rect2.cx - o2.x, rect2.cy - o2.y);
+            // fabric.util.rotateVector(vector, (rotateAngle / 180) * Math.PI);
 
-        
+            // ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            ctx.stroke();
+        }
 
-        // fabric.util.rotateVector(vector, (rotateAngle / 180) * Math.PI);
 
-        ctx.rect(rect.x, rect.y, rect.width, rect.height);
-        ctx.stroke();
-      }
+        function draw3(rect) {
+            ctx.restore();
+            // drawPoint(10, 100, "blue");
 
-      function rotate(ctx, ang, cx, cy, x, y) {
-        ctx.translate(cx, cy);
-        ctx.rotate((Math.PI * ang) / 180);
-        ctx.translate(-cx, -cy);
-      }
+            ctx.beginPath();
+            ctx.strokeStyle = "yellow";
+            //平移到组合图形坐标体系
+            ctx.translate(o2.x, o2.y);
+            //组合图形的旋转
+            ctx.rotate(rotateAngle / 180 * Math.PI);
+            //组合图形x方向的翻转
+            // ctx.translate(-rect.cx + o2.x, 0);
+            ctx.
+                // ctx.scale(-1, 1);
+                //平移到子图形的坐标体系
+            ctx.translate(rect.cx - o2.x, rect.cy - o2.y);
+            drawPoint(0, 0, "red");
 
-      draw1(rect2);
+            // ctx.rect(-rect.width / 2, -rect.height / 2, rect.width, rect.height);
+            ctx.translate(-rect.cx, -rect.cy);
+            ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            ctx.stroke();
 
-      draw2(rect2);
+        }
+
+        function draw4(origin, rect) {
+            ctx.restore();
+            var matrix = origin_matrix();
+            var mutiply = multiplyTransformMatrixes;
+            //平移到组合图形的中心
+            matrix = mutiply(matrix, calcTranslate(origin.x, origin.y));
+
+            //组合图形旋转
+            // matrix = mutiply(matrix, calcRotate(rotateAngle));
+            //组合图形缩放
+            // matrix = mutiply(matrix, calcScale(0.5, 2));
+
+            // matrix = mutiply(matrix, calcRotate(rotateAngle));
+
+
+            //开始绘制子图形
+            //从组合图形中心平移到子图形的中心
+            matrix = mutiply(matrix, calcTranslate(rect.cx - origin.x, rect.cy - origin.y));
+            //从子图形的中心平移回当前坐标系原点
+            matrix = mutiply(matrix, calcTranslate(-rect.cx, -rect.cy));
+
+            ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
+
+            ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            ctx.stroke();
+
+        }
+
+        // function rotate(ang, cx, cy, x, y) {
+        //     ctx.translate(cx, cy);
+        //     ctx.rotate((Math.PI * ang) / 180);
+        //     ctx.translate(-cx, -cy);
+        // }
+
+        function drawPoint(x, y, c) {
+            ctx.strokeStyle = c || "black";
+            ctx.fillStyle = c || "black";
+            ctx.moveTo(x, y);
+            ctx.arc(x, y, 3, 0, Math.PI * 2, true);
+            ctx.fill();
+        }
+
+
+
+        draw1(rect2);
+
+        draw2(rect2);
+
+        draw3(rect2);
+
+        // draw4(o2, rect2);
+
+
+        function origin_matrix() {
+            return [1, 0, 0, 1, 0, 0];
+        }
+
+        function multiplyTransformMatrixes(a, b) {
+            // Matrix multiply a * b
+            return [
+                a[0] * b[0] + a[2] * b[1],
+                a[1] * b[0] + a[3] * b[1],
+                a[0] * b[2] + a[2] * b[3],
+                a[1] * b[2] + a[3] * b[3],
+                a[0] * b[4] + a[2] * b[5] + a[4],
+                a[1] * b[4] + a[3] * b[5] + a[5]
+            ];
+        }
+
+        //平移
+        //translate（e,f）对应transform(1,0,0,1,e,f);
+        function calcTranslate(translateX, translateY) {
+            return [1, 0, 0, 1, translateX, translateY];
+        }
+
+        //旋转，以当前中心
+        // rotate(deg)对应transfom(cos(deg),sin(deg),-sin(deg),cos(deg),0,0);
+        function calcRotate(deg) {
+            var radian = deg * Math.PI / 180;
+            var cos = Math.cos(radian);
+            var sin = Math.sin(radian);
+            return [cos, sin, -sin, cos, 0, 0];
+        }
+
+        //旋转，绕origin点为中心
+        function calcRotateByOrigin(origin, deg) {
+            var matrix = translate(origin.x, origin.y);
+            if (deg) {
+                matrix = multiplyTransformMatrices(matrix, calcRotate(deg));
+            }
+            return matrix;
+        }
+
+        // scale(a,d)对应transform(a,0,0,d,0,0);
+        function calcScale(scaleX, scaleY) {
+            scaleX = typeof scaleX === 'undefined' ? 1 : scaleX;
+            scaleY = typeof scaleY === 'undefined' ? 1 : scaleY;
+            return [scaleX, 0, 0, scaleY, 0, 0];
+        }
+
+        function calcFlipX(flipX, x0) {
+            return null;
+        }
+
+        function calcFlip(flipX, flipY) {
+            return [flipX ? 1 : -1, 0, 0, flipY ? 1 : -1, 0, 0];
+        }
     </script>
-  </body>
+</body>
+
 </html>
