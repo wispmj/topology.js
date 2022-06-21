@@ -107,12 +107,11 @@
             //平移到组合图形坐标体系
             ctx.translate(o2.x, o2.y);
             //组合图形的旋转
-            ctx.rotate(rotateAngle / 180 * Math.PI);
             //组合图形x方向的翻转
             // ctx.translate(-rect.cx + o2.x, 0);
-            ctx.
-                // ctx.scale(-1, 1);
-                //平移到子图形的坐标体系
+            ctx.scale(-1, 1);
+            ctx.rotate(rotateAngle / 180 * Math.PI);
+            //平移到子图形的坐标体系
             ctx.translate(rect.cx - o2.x, rect.cy - o2.y);
             drawPoint(0, 0, "red");
 
