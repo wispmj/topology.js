@@ -1,23 +1,24 @@
-function utils() {
-    utils.multiplyMatrix = function(a, b) {
-        // Matrix multiply a * b
-        return [
-            a[0] * b[0] + a[2] * b[1],
-            a[1] * b[0] + a[3] * b[1],
-            a[0] * b[2] + a[2] * b[3],
-            a[1] * b[2] + a[3] * b[3],
-            a[0] * b[4] + a[2] * b[5] + a[4],
-            a[1] * b[4] + a[3] * b[5] + a[5]
-        ];
-    }
+const { isJSDocThisTag } = require("typescript");
 
-    utils.multiplyMatrix = function(degrees) {
-        return degrees * Math.PI / 180;
-    }
+function utils() {}
+utils.multiplyMatrix = function(a, b) {
+    // Matrix multiply a * b
+    return [
+        a[0] * b[0] + a[2] * b[1],
+        a[1] * b[0] + a[3] * b[1],
+        a[0] * b[2] + a[2] * b[3],
+        a[1] * b[2] + a[3] * b[3],
+        a[0] * b[4] + a[2] * b[5] + a[4],
+        a[1] * b[4] + a[3] * b[5] + a[5]
+    ];
+}
 
-    utils.radiansToDegrees = function(radians) {
-        return radians / Math.PI * 180;
-    }
+utils.degreesToRadians = function(degrees) {
+    return degrees * Math.PI / 180;
+}
+
+utils.radiansToDegrees = function(radians) {
+    return radians / Math.PI * 180;
 }
 
 
@@ -33,8 +34,8 @@ class CanvasState {
 
 class StandardOperation {
     constructor() {
-        this.traslateX = 0;
-        this.traslateY = 0;
+        this.translateX = 0;
+        this.translateY = 0;
         this.scaleX = 1;
         this.scaleY = 1;
         this.flipX = false;
@@ -43,6 +44,7 @@ class StandardOperation {
 
         this.originalX = 0;
         this.originalY = 0;
+        this.currentMatrix = [];
     }
 
     static originalMatrix = [1, 0, 0, 1, 0, 0];
@@ -50,21 +52,78 @@ class StandardOperation {
     toMatrix() {
         var matrix = [1, 0, 0, 1, this.translateX || 0, this.translateY || 0];
         if (this.angle) {
-            matrix = utils.multiplyMatrix(matrix, calcRotateMatrix(this));
+            matrix = utils.multiplyMatrix(matrix, this.calcRotateMatrix(this));
         }
         if (this.scaleX !== 1 || this.scaleY !== 1 ||
             this.skewX || this.skewY || this.flipX || this.flipY) {
-            matrix = utils.multiplyMatrix(matrix, calcDimensionsMatrix(this));
+            matrix = utils.multiplyMatrix(matrix, this.calcDimensionsMatrix(this));
         }
         return matrix;
     }
 
-    addTranslate(translateX, traslateY) {
-        this.traslateX += translateX;
-        this.translateY += traslateY;
+    toOperation(matrix) {
+        let a = matrix;
+        var radian = atan2(a[1], a[0]),
+            denom = pow(a[0], 2) + pow(a[1], 2),
+            scaleX = sqrt(denom),
+            scaleY = (a[0] * a[3] - a[2] * a[1]) / scaleX,
+            skewX = atan2(a[0] * a[2] + a[1] * a[3], denom);
+        var op = this;
+        op.angle = radian / Math.PI * 180;
+        op.scaleX = scaleX;
+        op.scaleY = scaleY;
+        op.skewX = skewX / PiBy180;
+        op.skewY = 0;
+        op.translateX = a[4];
+        op.translateY = a[5];
     }
 
-    addRotate(original, angle) {
+    addMatrix(matrix) {
+        var curMatrix = this.toMatrix(); //maybe convert twice  to matrix,need fix
+        this.currentMatrix = utils.multiplyMatrix(curMatrix, matrix);
+        this.toOperation(this.currentMatrix);
+    }
+
+    addTranslate(translateX, translateY) {
+        var translateMatrix = [1, 0, 0, 1, translateX, translateY];
+        addMatrix(translateMatrix);
+    }
+
+    addRotate(deltaAngle) {
+        //如果已翻转，再旋转则是
+        if ((this.flipX || this.flipY) && !(flipx && this.flipY)) {
+            deltaAngle = -deltaAngle;
+        }
+
+        if (!deltaAngle) {
+            return;
+        }
+
+        var radian = utils.degreesToRadians(deltaAngle),
+            cos = Math.cos(radian),
+            sin = Math.sin(radian);
+        var rotateMatrix = [cos, sin, -sin, cos, 0, 0];
+        addMatrix(rotateMatrix);
+    }
+
+    addFlip(flipAxis) {
+        if (!flipAxis) {
+            return;
+        }
+        if (this.angle) {
+            this.angle = -1 * this.angle;
+        }
+        flipAxis = flipAxis.toLowerCase();
+        if (flipAxis == "x") {
+            this.flipX = !this.flipX;
+        }
+        if (flipAxis == "y") {
+            this.flipY = !this.flipY;
+        }
+
+    }
+
+    addScale(scaleX, scaleY) {
 
     }
 

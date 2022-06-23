@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <title>测试1</title>
     <script type="text/javascript" src="../lib/fabric.js"></script>
+    <script type="text/javascript" src="../lib/state.js"></script>
 </head>
 
 <body>
@@ -109,7 +110,7 @@
             //组合图形的旋转
             //组合图形x方向的翻转
             // ctx.translate(-rect.cx + o2.x, 0);
-            ctx.scale(-1, 1);
+            // ctx.scale(-1, 1);
             ctx.rotate(rotateAngle / 180 * Math.PI);
             //平移到子图形的坐标体系
             ctx.translate(rect.cx - o2.x, rect.cy - o2.y);
@@ -150,6 +151,27 @@
 
         }
 
+        function draw5(origin, rect) {
+            ctx.restore();
+
+            var state = new StandardOperation();
+            state.addTranslate(origin.x, origin.y);
+            state.addRotate(rotateAngle);
+            state.addFlip("x");
+
+            state.addTranslate(rect.cx - origin.x, rect.cy - origin.y);
+
+            state.addTranslate(-rect.cx, -rect.cy);
+
+            var matrix = state.toMatrix();
+            ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
+
+            ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            ctx.stroke();
+
+
+        }
+
         // function rotate(ang, cx, cy, x, y) {
         //     ctx.translate(cx, cy);
         //     ctx.rotate((Math.PI * ang) / 180);
@@ -168,11 +190,12 @@
 
         draw1(rect2);
 
-        draw2(rect2);
+        // draw2(rect2);
 
-        draw3(rect2);
+        // draw3(rect2);
 
         // draw4(o2, rect2);
+        draw5(o2, rect2);
 
 
         function origin_matrix() {
