@@ -156,8 +156,8 @@
 
             var state = new StandardOperation();
             state.addTranslate(origin.x, origin.y);
-            state.addRotate(rotateAngle);
             state.addFlip("x");
+            state.addRotate(rotateAngle);
 
             state.addTranslate(rect.cx - origin.x, rect.cy - origin.y);
 

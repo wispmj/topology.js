@@ -1,5 +1,3 @@
-const { isJSDocThisTag } = require("typescript");
-
 function utils() {}
 utils.multiplyMatrix = function(a, b) {
     // Matrix multiply a * b
@@ -63,16 +61,16 @@ class StandardOperation {
 
     toOperation(matrix) {
         let a = matrix;
-        var radian = atan2(a[1], a[0]),
-            denom = pow(a[0], 2) + pow(a[1], 2),
-            scaleX = sqrt(denom),
+        var radian = Math.atan2(a[1], a[0]),
+            denom = Math.pow(a[0], 2) + Math.pow(a[1], 2),
+            scaleX = Math.sqrt(denom),
             scaleY = (a[0] * a[3] - a[2] * a[1]) / scaleX,
-            skewX = atan2(a[0] * a[2] + a[1] * a[3], denom);
+            skewX = Math.atan2(a[0] * a[2] + a[1] * a[3], denom);
         var op = this;
         op.angle = radian / Math.PI * 180;
         op.scaleX = scaleX;
         op.scaleY = scaleY;
-        op.skewX = skewX / PiBy180;
+        op.skewX = skewX / Math.PI * 180;
         op.skewY = 0;
         op.translateX = a[4];
         op.translateY = a[5];
@@ -86,41 +84,61 @@ class StandardOperation {
 
     addTranslate(translateX, translateY) {
         var translateMatrix = [1, 0, 0, 1, translateX, translateY];
-        addMatrix(translateMatrix);
+        this.addMatrix(translateMatrix);
     }
 
     addRotate(deltaAngle) {
-        //如果已翻转，再旋转则是
-        if ((this.flipX || this.flipY) && !(flipx && this.flipY)) {
-            deltaAngle = -deltaAngle;
-        }
-
         if (!deltaAngle) {
             return;
+        }
+
+        //如果已翻转，再旋转
+        if (this.flipX != this.flipY) {
+            deltaAngle = -deltaAngle;
         }
 
         var radian = utils.degreesToRadians(deltaAngle),
             cos = Math.cos(radian),
             sin = Math.sin(radian);
         var rotateMatrix = [cos, sin, -sin, cos, 0, 0];
-        addMatrix(rotateMatrix);
+        this.addMatrix(rotateMatrix);
     }
 
     addFlip(flipAxis) {
         if (!flipAxis) {
             return;
         }
-        if (this.angle) {
-            this.angle = -1 * this.angle;
-        }
-        flipAxis = flipAxis.toLowerCase();
-        if (flipAxis == "x") {
-            this.flipX = !this.flipX;
-        }
-        if (flipAxis == "y") {
-            this.flipY = !this.flipY;
-        }
 
+        //if has rotate，revert rotate by rotate current angle
+        var currentAngle = this.angle;
+        if (currentAngle) {
+            var deltaAngle = -currentAngle;
+            var radian = utils.degreesToRadians(deltaAngle),
+                cos = Math.cos(radian),
+                sin = Math.sin(radian);
+            var rotateMatrix = [cos, sin, -sin, cos, 0, 0];
+            this.addMatrix(rotateMatrix);
+        }
+        //then flip on current axis
+        flipAxis = flipAxis.toLowerCase();
+        var scaleMatrix = [
+            flipAxis == "x" ? -1 : 1,
+            0,
+            0,
+            flipAxis == "y" ? -1 : 1,
+            0,
+            0
+        ];
+        this.addMatrix(scaleMatrix);
+
+        if (currentAngle) {
+            var deltaAngle = currentAngle;
+            var radian = utils.degreesToRadians(deltaAngle),
+                cos = Math.cos(radian),
+                sin = Math.sin(radian);
+            var rotateMatrix = [cos, sin, -sin, cos, 0, 0];
+            this.addMatrix(rotateMatrix);
+        }
     }
 
     addScale(scaleX, scaleY) {
