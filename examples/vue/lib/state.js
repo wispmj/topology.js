@@ -93,7 +93,7 @@ class StandardOperation {
         }
 
         //如果已翻转，再旋转
-        if (this.flipX != this.flipY) {
+        if (this.flipX != this.flipY || this.scaleX * this.scaleY < 0) {
             deltaAngle = -deltaAngle;
         }
 
@@ -168,12 +168,12 @@ class StandardOperation {
             ];
         if (opr.skewX) {
             scaleMatrix = utils.multiplyMatrix(
-                scaleMatrix, [1, 0, Math.tan(degreesToRadians(opr.skewX)), 1],
+                scaleMatrix, [1, 0, Math.tan(utils.degreesToRadians(opr.skewX)), 1],
                 true);
         }
         if (opr.skewY) {
             scaleMatrix = utils.multiplyMatrix(
-                scaleMatrix, [1, Math.tan(degreesToRadians(opr.skewY)), 0, 1],
+                scaleMatrix, [1, Math.tan(utils.degreesToRadians(opr.skewY)), 0, 1],
                 true);
         }
         return scaleMatrix;
