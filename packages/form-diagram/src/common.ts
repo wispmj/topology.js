@@ -8,6 +8,11 @@ export interface Pos {
   col: number;
 }
 
+export enum ReplaceMode {
+  Add,
+  Replace,
+  ReplaceAll,
+}
 export interface formPen extends Pen {
   optionPos?: number[];
   direction?: string;
@@ -74,6 +79,7 @@ export interface formPen extends Pen {
   }[];
   data: any;
   isFirstTime: boolean;
+  replaceMode?: ReplaceMode;
 }
 
 export interface cellData extends ChartData {
@@ -86,7 +92,8 @@ export function getTextLength(text: string, pen: any) {
   const textScale = (pen.calculative.worldRect.height * 14) / 16;
   const chinese = text.match(/[\u4e00-\u9fa5]/g) || '';
   const chineseLen = chinese.length;
-  const width = (text.length - chineseLen) * textScale * 0.6 + chineseLen * textScale;
+  const width =
+    (text.length - chineseLen) * textScale * 0.6 + chineseLen * textScale;
   return width;
 }
 
