@@ -2,6 +2,7 @@ import { formPen, cellData, Pos } from './common';
 import { Point } from '../../core/src/point';
 import { Rect } from '../../core/src/rect';
 import { calcRightBottom, calcTextLines, PenType } from '@topology/core';
+import { ReplaceMode } from './common';
 
 export function table2(ctx: CanvasRenderingContext2D, pen: formPen) {
   if (!pen.onAdd) {
@@ -29,6 +30,50 @@ export function table2(ctx: CanvasRenderingContext2D, pen: formPen) {
 
   // 画单元格
   drawCell(ctx, pen);
+
+  // 画title
+  drawNote(ctx, pen);
+  pen.isFirstTime = false;
+}
+
+function drawNote(ctx: CanvasRenderingContext2D, pen: any) {
+  if (!pen.calculative.hoverCell) {
+    return;
+  }
+  if (!pen.calculative.isHover) {
+    return;
+  }
+  const { row, col } = pen.calculative.hoverCell;
+  const { x, y } = pen.calculative.canvas.mousePos;
+  let text = pen.data[row][col];
+  if (typeof text === 'object' || !text) {
+    return;
+  }
+  ctx.save();
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'middle';
+  ctx.font = ctx.font =
+    (pen.calculative.fontStyle || '') +
+    ' normal ' +
+    (pen.calculative.fontWeight || '') +
+    ' ' +
+    (pen.calculative.fontSize || 12) +
+    'px ' +
+    pen.calculative.fontFamily;
+
+  const noteWidth = ctx.measureText(text).width;
+  ctx.beginPath();
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#000';
+  ctx.moveTo(x, y);
+  ctx.rect(x - 10, y, noteWidth + 20, 20);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.fillStyle = '#000';
+  ctx.fillText(text, x, y + 10);
+  ctx.restore();
 }
 
 function initRect(pen: formPen) {
@@ -43,13 +88,16 @@ function initRect(pen: formPen) {
   }
   let width = 0;
   //获取所有col width
-  const _col = pen.styles.filter((item) => {
-    return item.col !== undefined && item.row === undefined && item.width;
-  });
+  const _col =
+    pen.styles &&
+    pen.styles.filter((item) => {
+      return item.col !== undefined && item.row === undefined && item.width;
+    });
   let _colWidthMap = {};
-  _col.forEach((_c) => {
-    _colWidthMap[_c.col] = _c.width;
-  });
+  _col &&
+    _col.forEach((_c) => {
+      _colWidthMap[_c.col] = _c.width;
+    });
   for (let i = 0; i < pen.data[0].length; i++) {
     width += _colWidthMap[i] || pen.colWidth;
     colPos.push(width);
@@ -58,13 +106,16 @@ function initRect(pen: formPen) {
   let height = 0;
 
   //获取所有row height
-  const _row = pen.styles.filter((item) => {
-    return item.col === undefined && item.row !== undefined && item.height;
-  });
+  const _row =
+    pen.styles &&
+    pen.styles.filter((item) => {
+      return item.col === undefined && item.row !== undefined && item.height;
+    });
   let _rowHeightMap = {};
-  _row.forEach((_r) => {
-    _rowHeightMap[_r.row] = _r.height;
-  });
+  _row &&
+    _row.forEach((_r) => {
+      _rowHeightMap[_r.row] = _r.height;
+    });
   // 显示表头
   for (let j = 0; j < pen.data.length; j++) {
     height += _rowHeightMap[j] || pen.rowHeight;
@@ -153,10 +204,16 @@ function drawCell(ctx: CanvasRenderingContext2D, pen: formPen) {
       let { value: cell, style: cellStyle } = getCell(pen, i, j);
       let isSuccess = true;
       //样式条件成立
-      if ((cellStyle as any).wheres && Array.isArray((cellStyle as any).wheres)) {
+      if (
+        (cellStyle as any).wheres &&
+        Array.isArray((cellStyle as any).wheres)
+      ) {
         isSuccess = false;
         isSuccess = (cellStyle as any).wheres.every(function (where: any) {
-          const fn = new Function('attr', `return attr ${where.comparison} ${where.value}`);
+          const fn = new Function(
+            'attr',
+            `return attr ${where.comparison} ${where.value}`
+          );
           return fn(cell);
         });
       }
@@ -169,13 +226,19 @@ function drawCell(ctx: CanvasRenderingContext2D, pen: formPen) {
       let activeColor: any;
 
       // 选中
-      if (pen.calculative.activeCell?.row === i && pen.calculative.activeCell?.col === j) {
+      if (
+        pen.calculative.activeCell?.row === i &&
+        pen.calculative.activeCell?.col === j
+      ) {
         color = pen.activeColor;
         background = pen.activeBackground;
         activeColor = color;
       }
       // hover
-      if (pen.calculative.hoverCell?.row === i && pen.calculative.hoverCell?.col === j) {
+      if (
+        pen.calculative.hoverCell?.row === i &&
+        pen.calculative.hoverCell?.col === j
+      ) {
         color = pen.hoverColor;
         background = pen.hoverBackground;
 
@@ -212,9 +275,11 @@ function drawCell(ctx: CanvasRenderingContext2D, pen: formPen) {
       if (rowText[j] == null) {
         if (typeof cell === 'object') {
           // TODO 配置 {} 代表添加节点 考虑是否有表头
-          const _colPen = pen.styles.filter((item) => {
-            return item.col === j && item.row === undefined && item.pens;
-          });
+          const _colPen =
+            pen.styles &&
+            pen.styles.filter((item) => {
+              return item.col === j && item.row === undefined && item.pens;
+            });
           if (_colPen.length > 0) {
             rowText[j] = '';
             if (pen.isFirstTime) {
@@ -258,15 +323,24 @@ function drawCell(ctx: CanvasRenderingContext2D, pen: formPen) {
         pen.calculative.fontFamily;
 
       if (rowText[j].length === 1) {
-        ctx.fillText(rowText[j][0], rect.x + rect.width / 2, rect.y + rect.height / 2);
+        ctx.fillText(
+          rowText[j][0],
+          rect.x + rect.width / 2,
+          rect.y + rect.height / 2
+        );
       } else {
         const y = 0.55;
-        const lineHeight = pen.calculative.fontSize * pen.calculative.lineHeight * textScale;
+        const lineHeight =
+          pen.calculative.fontSize * pen.calculative.lineHeight * textScale;
 
         const h = rowText[j].length * lineHeight;
         let top = (rect.height - h) / 2;
         rowText[j].forEach((text, i) => {
-          ctx.fillText(text, rect.x + rect.width / 2, rect.y + top + (i + y) * lineHeight);
+          ctx.fillText(
+            text,
+            rect.x + rect.width / 2,
+            rect.y + top + (i + y) * lineHeight
+          );
         });
       }
       ctx.restore();
@@ -286,15 +360,24 @@ function onShowInput(pen: any, e: Point) {
     return;
   }
 
-  const { value: cell } = getCell(pen, pen.calculative.hoverCell.row, pen.calculative.hoverCell.col);
+  const { value: cell } = getCell(
+    pen,
+    pen.calculative.hoverCell.row,
+    pen.calculative.hoverCell.col
+  );
   // 子节点，非文本
   if (typeof cell === 'object') {
     return;
   }
-
+  pen.calculative.isHover = false;
+  pen.calculative.canvas.render();
   pen.calculative.inputCell = pen.calculative.hoverCell;
 
-  const rect = getCellRect(pen, pen.calculative.hoverCell.row, pen.calculative.hoverCell.col);
+  const rect = getCellRect(
+    pen,
+    pen.calculative.hoverCell.row,
+    pen.calculative.hoverCell.col
+  );
   pen.calculative.tempText = cell.text || cell + '';
   pen.calculative.canvas.showInput(pen, rect, '#ffffff');
 }
@@ -305,11 +388,25 @@ function onInput(pen: formPen, text: string) {
     return;
   }
 
-  setCellText(pen, pen.calculative.inputCell.row, pen.calculative.inputCell.col, text);
+  setCellText(
+    pen,
+    pen.calculative.inputCell.row,
+    pen.calculative.inputCell.col,
+    text
+  );
+  pen.calculative.isHover = true;
   pen.calculative.canvas.render();
 }
 
 function onMouseMove(pen: formPen, e: Point) {
+  if (pen.timer) {
+    pen.calculative.isHover = false;
+    clearTimeout(pen.timer);
+  }
+  pen.timer = setTimeout(() => {
+    pen.calculative.isHover = true;
+    pen.calculative.canvas.render();
+  }, 500);
   pen.calculative.hoverCell = getCellIndex(pen, e);
   pen.calculative.canvas.render();
 }
@@ -354,18 +451,25 @@ function getCell(pen: formPen, rowIndex: number, colIndex: number) {
 
   const row = pen.data[rowIndex];
   //TODO 没有获取单独设置 某行 某列 的样式
-  const style = pen.styles.filter((item) => {
-    return item.row === rowIndex && item.col === colIndex;
-  });
+  const style =
+    pen.styles &&
+    pen.styles.filter((item) => {
+      return item.row === rowIndex && item.col === colIndex;
+    });
   if (Array.isArray(row)) {
-    return { value: row[colIndex], style: style.length > 0 ? style[0] : {} };
+    return { value: row[colIndex], style: style?.length > 0 ? style[0] : {} };
   } else if (!row.data || !Array.isArray(row.data)) {
     return;
   }
 }
 
 // 设置cell的文本
-function setCellText(pen: formPen, rowIndex: number, colIndex: number, text: string) {
+function setCellText(
+  pen: formPen,
+  rowIndex: number,
+  colIndex: number,
+  text: string
+) {
   if (!pen.data || !Array.isArray(pen.data)) {
     return;
   }
@@ -454,16 +558,49 @@ function onValue(pen: formPen) {
     delete pen.calculative.isUpdateData;
     let temChildren = pen.children;
     pen.children = [];
-    temChildren.forEach((child: string) => {
-      pen.calculative.canvas.delete([pen.calculative.canvas.findOne(child)], true);
-    });
+    temChildren &&
+      temChildren.forEach((child: string) => {
+        pen.calculative.canvas.delForce(pen.calculative.canvas.findOne(child));
+      });
     pen.calculative.texts = undefined;
+    pen.calculative.canvas.active([pen]);
   }
 }
 
 function beforeValue(pen: formPen, value: any) {
-  if ((value as any).table || (value.col == undefined && value.row == undefined)) {
-    // 整体传参，不做处理
+  pen.calculative.isUpdateData = false;
+  if (
+    (value as any).table ||
+    (value.col == undefined && value.row == undefined)
+  ) {
+    if (value.dataY) {
+      const replaceMode = pen.replaceMode;
+      let data = [];
+      if (!replaceMode) {
+        //追加
+        data = pen.data.concat(value.dataY);
+      } else if (replaceMode === ReplaceMode.Replace) {
+        //替换
+        data = pen.data;
+        value.dataX &&
+          value.dataX.forEach((item: number, index: number) => {
+            data[item] = value.dataY[index];
+          });
+      } else if (replaceMode === ReplaceMode.ReplaceAll) {
+        //替换指定
+        if (value.dataX) {
+          data[0] = value.dataX;
+        } else {
+          data[0] = pen.data[0];
+        }
+        data = data.concat(value.dataY);
+      }
+      delete value.dataX;
+      delete value.dataY;
+      pen.calculative.isUpdateData = true;
+      return Object.assign(value, { data });
+    }
+
     if (value.data || pen.styles) {
       pen.calculative.isUpdateData = true;
     }
@@ -477,6 +614,7 @@ function beforeValue(pen: formPen, value: any) {
   } else {
     rowData[value.col] = value.value;
   }
+  setCellText(pen, value.row, value.col, value.value);
   pen.calculative.canvas.render();
   delete value.col;
   delete value.row;
