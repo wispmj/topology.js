@@ -1666,7 +1666,7 @@ export function setNodeAnimateProcess(pen: Pen, process: number) {
         newScale / pen.prevFrame.scale,
         pen.calculative.worldRect.center
       );
-      pen.calculative.dirty = true;
+      pen.calculative.patchFlags = true;
     } else if (k === 'x') {
       const lastVal = getFrameValue(pen, k, pen.calculative.frameIndex);
       pen.calculative.worldRect.x = pen.calculative.initRect.x + lastVal;
@@ -1676,7 +1676,7 @@ export function setNodeAnimateProcess(pen: Pen, process: number) {
         frame[k] * process * pen.calculative.canvas.store.data.scale,
         0
       );
-      pen.calculative.dirty = true;
+      pen.calculative.patchFlags = true;
     } else if (k === 'y') {
       const lastVal = getFrameValue(pen, k, pen.calculative.frameIndex);
       pen.calculative.worldRect.y = pen.calculative.initRect.y + lastVal;
@@ -1686,7 +1686,7 @@ export function setNodeAnimateProcess(pen: Pen, process: number) {
         0,
         frame[k] * process * pen.calculative.canvas.store.data.scale
       );
-      pen.calculative.dirty = true;
+      pen.calculative.patchFlags = true;
     } else if (k === 'rotate') {
       if (pen.prevFrame[k] >= 360) {
         pen.prevFrame[k] %= 360;
@@ -1694,7 +1694,7 @@ export function setNodeAnimateProcess(pen: Pen, process: number) {
       const lastVal = getFrameValue(pen, k, pen.calculative.frameIndex);
       pen.calculative.rotate =
         (pen.calculative.initRect.rotate + lastVal + frame[k] * process) % 360;
-      pen.calculative.dirty = true;
+      pen.calculative.patchFlags = true;
     } else if (isLinear(frame[k], k, pen)) {
       if (pen.prevFrame[k] == null) {
         if (k === 'globalAlpha') {
