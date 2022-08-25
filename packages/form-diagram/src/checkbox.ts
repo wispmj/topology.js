@@ -5,6 +5,9 @@ import { Point } from '../../core/src/point';
 export function checkbox(ctx: CanvasRenderingContext2D, pen: formPen) {
   if (!pen.onAdd) {
     pen.onAdd = onAdd;
+    if (!pen.optionPos) {
+      pen.onAdd(pen);
+    }
     pen.onMouseDown = onMousedown;
     pen.onValue = onValue;
   }
