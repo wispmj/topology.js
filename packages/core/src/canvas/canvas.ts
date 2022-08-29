@@ -2812,6 +2812,19 @@ export class Canvas {
   }
 
   initLineRect(pen: Pen) {
+    if (
+      !pen.calculative.worldAnchors ||
+      pen.calculative.worldAnchors.length == 0
+    ) {
+      this._del([pen]);
+      return;
+    }
+    if (!isFinite(pen.x) || !isFinite(pen.x)) {
+      return;
+    }
+    if (pen.x == null || pen.y == null) {
+      return;
+    }
     const rect = getLineRect(pen);
     if (!pen.parentId) {
       Object.assign(pen, rect);
@@ -4670,20 +4683,20 @@ export class Canvas {
     if (!pens || !pens.length) {
       return;
     }
-
-    this._del(pens);
+    const deletePens: Pen[] = [];
+    this._del(pens, deletePens);
     this.initImageCanvas(pens);
     this.inactive();
     this.clearHover();
     this.render();
     // TODO: 连线的删除 ，连接的 node 的 connectLines 会变化（删除 node ，line 的 anchors 类似），未记历史记录
     if (history) {
-      this.pushHistory({ type: EditType.Delete, pens });
+      this.pushHistory({ type: EditType.Delete, pens: deletePens });
     }
     this.store.emitter.emit('delete', pens);
   }
 
-  private _del(pens: Pen[]) {
+  private _del(pens: Pen[], delPens?: Pen[]) {
     if (!pens) {
       return;
     }
@@ -4692,6 +4705,9 @@ export class Canvas {
         if (pen.locked) {
           return;
         } else {
+          if (delPens) {
+            this.getDelPens(pen, delPens);
+          }
           this.delForce(pen);
         }
       } else {
@@ -4700,13 +4716,33 @@ export class Canvas {
           console.warn('父节点锁定');
           return;
         } else {
-          const parentPen = this.store.pens[pen.parentId];
+          const parentPen = this.store.data.pens[pen.parentId];
           const _index = parentPen.children.indexOf(pen.id);
           parentPen.children.splice(_index, 1);
+          if (delPens) {
+            this.getDelPens(pen, delPens);
+          }
           this.delForce(pen);
         }
       }
     });
+  }
+
+  getDelPens(pen: Pen, delPens: Pen[]) {
+    if (!pen) {
+      return;
+    }
+    const i = this.store.data.pens.findIndex((item) => item.id === pen.id);
+    if (i > -1) {
+      const delPen = this.store.pens[pen.id];
+      delPen.calculative.active = undefined;
+      delPens.push(delPen);
+    }
+    if (pen.children) {
+      pen.children.forEach((id) => {
+        this.getDelPens(this.store.pens[id], delPens);
+      });
+    }
   }
 
   private getLockedParent(pen: Pen) {
