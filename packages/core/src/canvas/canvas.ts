@@ -1743,6 +1743,7 @@ export class Canvas {
       this.hoverType === HoverType.LineAnchor &&
       this.store.hover &&
       this.store.active[0] &&
+      this.store.active[0].name === 'line' &&
       this.store.active[0] !== this.store.hover
     ) {
       const line = this.store.active[0];
@@ -2812,10 +2813,7 @@ export class Canvas {
   }
 
   initLineRect(pen: Pen) {
-    if (
-      !pen.calculative.worldAnchors ||
-      pen.calculative.worldAnchors.length == 0
-    ) {
+    if (!pen.calculative.worldAnchors?.length) {
       this._del([pen]);
       return;
     }
