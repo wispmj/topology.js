@@ -1040,7 +1040,7 @@ export class Canvas {
         altKey: event.altKey,
         buttons: 1,
       });
-    } else if (len === 2) {
+    } else if (len === 2 && this.startTouches?.length === 2) {
       if (!this.touchMoving && !this.touchScaling) {
         const x1 = this.startTouches[0].pageX - touches[0].pageX;
         const x2 = this.startTouches[1].pageX - touches[1].pageX;
@@ -4911,7 +4911,7 @@ export class Canvas {
     const textRect = rect || pen.calculative.worldTextRect;
 
     //value和innerText问题
-    const preInputText = pen.calculative.tempText || pen.text || '';
+    const preInputText = pen.calculative.tempText || pen.text + '' || '';
     const textArr = preInputText.split(/[\s\n]/);
     const finalText = `${textArr.join('</div><div>')}</div>`
       .replace('</div>', '')
@@ -5299,6 +5299,9 @@ export class Canvas {
     const li = document.createElement('li');
     li.onwheel = this.stopPropagation;
     li.innerText = text;
+    li.style.overflow = 'hidden';
+    li.style.textOverflow = 'ellipsis';
+    li.title = text;
     li.onmousedown = this.stopPropagation;
     li.dataset.i = index + '';
     li.onclick = this.selectDropdown;
