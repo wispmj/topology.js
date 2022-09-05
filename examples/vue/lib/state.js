@@ -162,7 +162,7 @@ class StandardOperation {
                 opr.flipX ? -scaleX : scaleX,
                 0,
                 0,
-                opr.flipY ? -opr : scaleY,
+                opr.flipY ? -scaleY : scaleY,
                 0,
                 0
             ];
