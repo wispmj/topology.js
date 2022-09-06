@@ -1953,7 +1953,7 @@ export class Canvas {
     }
     this.addPen({
       isRuleLine: true,
-      locked: LockState.DisableMove,
+      // locked: LockState.DisableMove,
       type: PenType.Line,
       name: 'line',
       lineName: 'line',
@@ -5236,6 +5236,14 @@ export class Canvas {
     this.inputDiv.onwheel = (e) => {
       e.stopPropagation();
     };
+    this.inputDiv.onpaste = (e) => {
+      e.preventDefault();
+      let text = '';
+      if (e.clipboardData && e.clipboardData.getData) {
+        text = e.clipboardData.getData('text/plain');
+      }
+      document.execCommand('insertHTML', false, text);
+    };
   }
 
   clearDropdownList() {
@@ -5462,6 +5470,7 @@ export class Canvas {
         width: data.width ?? penRect.width,
         height: data.height ?? penRect.height,
       };
+      console.log('rect', rect);
       this.setPenRect(pen, rect, false);
       this.updateLines(pen, true);
     } else if (willPatchFlagsPenRect) {

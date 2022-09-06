@@ -2075,7 +2075,13 @@ export class Topology {
    * @param to 被连接节点
    * @param toAnchor 被连接节点锚点
    */
-  connectLine(from: Pen, to: Pen, fromAnchor?: Point, toAnchor?: Point) {
+  connectLine(
+    from: Pen,
+    to: Pen,
+    fromAnchor?: Point,
+    toAnchor?: Point,
+    render: boolean = true
+  ) :Pen{
     if (!fromAnchor) {
       const _worldRect = to.calculative.worldRect;
       fromAnchor = nearestAnchor(from, {
@@ -2123,7 +2129,10 @@ export class Topology {
     this.canvas.updateLines(from);
     this.canvas.updateLines(to);
     this.canvas.initLineRect(line);
-    this.render();
+    if (render) {
+      this.render();
+    }
+    return line;
   }
   /**
    * 生成一个拷贝组合后的 画笔数组（组合图形），不影响原画布画笔，常用作 二次复用的组件
