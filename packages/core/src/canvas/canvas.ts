@@ -267,7 +267,7 @@ export class Canvas {
       this.scroll = new Scroll(this);
     }
 
-    this.store.dpiRatio = window ? window.devicePixelRatio : 1;
+    this.store.dpiRatio = globalThis.devicePixelRatio || 1;
 
     if (this.store.dpiRatio < 1) {
       this.store.dpiRatio = 1;
@@ -278,8 +278,8 @@ export class Canvas {
     this.clientRect = this.externalElements.getBoundingClientRect();
     this.listen();
 
-    window && window.addEventListener('resize', this.onResize);
-    window && window.addEventListener('scroll', this.onScroll);
+    window?.addEventListener('resize', this.onResize);
+    window?.addEventListener('scroll', this.onScroll);
   }
 
   curve = curve;
@@ -1663,13 +1663,13 @@ export class Canvas {
       }
     }
 
-    window && (window as any).debug && console.time('hover');
+    globalThis.debug && console.time('hover');
     const now = performance.now();
     if (now - this.hoverTimer > 50) {
       this.hoverTimer = now;
       this.getHover(e);
     }
-    window && (window as any).debug && console.timeEnd('hover');
+    globalThis.debug && console.timeEnd('hover');
     if (this.hotkeyType === HotkeyType.AddAnchor) {
       this.patchFlags = true;
     }
@@ -3207,9 +3207,9 @@ export class Canvas {
     offscreenCtx.clearRect(0, 0, this.offscreen.width, this.offscreen.height);
     offscreenCtx.save();
     offscreenCtx.translate(this.store.data.x, this.store.data.y);
-    window && (window as any).debugRender && console.time('renderPens');
+    globalThis.debugRender && console.time('renderPens');
     this.renderPens();
-    window && (window as any).debugRender && console.timeEnd('renderPens');
+    globalThis.debugRender && console.timeEnd('renderPens');
     this.renderBorder();
     this.renderHoverPoint();
     offscreenCtx.restore();
@@ -4318,7 +4318,6 @@ export class Canvas {
         pen.visible != false
     );
     if (!canMovePens.length) {
-      console.warn('active have no movable pens');
       return;
     } else if (canMovePens.length === 1) {
       this.activeRect = deepClone(canMovePens[0].calculative.worldRect);
@@ -4893,6 +4892,7 @@ export class Canvas {
 
   showInput = (pen: Pen, rect?: Rect, background = 'transparent') => {
     if (
+      !window ||
       !this.store.hover ||
       this.store.hover.locked ||
       this.store.hover.externElement ||
