@@ -1,5 +1,5 @@
-function utils() {}
-utils.multiplyMatrix = function(a, b) {
+function utils() { }
+utils.multiplyMatrix = function (a, b) {
     // Matrix multiply a * b
     return [
         a[0] * b[0] + a[2] * b[1],
@@ -11,11 +11,11 @@ utils.multiplyMatrix = function(a, b) {
     ];
 }
 
-utils.degreesToRadians = function(degrees) {
+utils.degreesToRadians = function (degrees) {
     return degrees * Math.PI / 180;
 }
 
-utils.radiansToDegrees = function(radians) {
+utils.radiansToDegrees = function (radians) {
     return radians / Math.PI * 180;
 }
 
@@ -31,6 +31,7 @@ class CanvasState {
 }
 
 class StandardOperation {
+    static originalMatrix = [1, 0, 0, 1, 0, 0];
     constructor() {
         this.translateX = 0;
         this.translateY = 0;
@@ -42,12 +43,14 @@ class StandardOperation {
 
         this.originalX = 0;
         this.originalY = 0;
-        this.currentMatrix = [];
+        this.currentMatrix = [1, 0, 0, 1, 0, 0];
+
+        this.hasMirror = false;
     }
 
-    static originalMatrix = [1, 0, 0, 1, 0, 0];
 
     toMatrix() {
+        return this.currentMatrix;
         var matrix = [1, 0, 0, 1, this.translateX || 0, this.translateY || 0];
         if (this.angle) {
             matrix = utils.multiplyMatrix(matrix, this.calcRotateMatrix(this));
@@ -77,7 +80,7 @@ class StandardOperation {
     }
 
     addMatrix(matrix) {
-        var curMatrix = this.toMatrix(); //maybe convert twice  to matrix,need fix
+        var curMatrix = this.currentMatrix;
         this.currentMatrix = utils.multiplyMatrix(curMatrix, matrix);
         this.toOperation(this.currentMatrix);
     }
@@ -93,7 +96,7 @@ class StandardOperation {
         }
 
         //如果已翻转，再旋转
-        if (this.flipX != this.flipY || this.scaleX * this.scaleY < 0) {
+        if (this.hasMirror) {
             deltaAngle = -deltaAngle;
         }
 
@@ -104,9 +107,22 @@ class StandardOperation {
         this.addMatrix(rotateMatrix);
     }
 
-    addFlip(flipAxis) {
+    addFlip(flipAxis, point) {
         if (!flipAxis) {
             return;
+        }
+
+        if (flipAxis == "x") {
+            this.flipX = !this.flipX;
+            this.hasMirror = !this.hasMirror;
+            this.currentMatrix[2] = -1 * this.currentMatrix[2];
+            this.currentMatrix[4] = -1 * this.currentMatrix[4];
+        }
+        else if (flipAxis == "y") {
+            this.flipY = !this.flipY;
+            this.hasMirror = !this.hasMirror;
+            this.currentMatrix[1] = -1 * this.currentMatrix[1];
+            this.currentMatrix[3] = -1 * this.currentMatrix[3];
         }
 
         //if has rotate，revert rotate by rotate current angle
