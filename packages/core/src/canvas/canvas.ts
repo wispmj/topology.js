@@ -2453,7 +2453,7 @@ export class Canvas {
   inAnchor(pt: Point, pen: Pen, anchor: Point) {
     this.store.hoverAnchor = undefined;
     this.movingAnchor = undefined;
-    if (!anchor) {
+    if (!anchor || anchor.locked > LockState.DisableEdit) {
       return HoverType.None;
     }
     if (this.store.options.disableAnchor || pen.disableAnchor) {
@@ -2799,11 +2799,7 @@ export class Canvas {
     }
 
     this.updatePenRect(pen);
-
-    if (pen.type) {
-      // TODO: 上面 updatePenRect 方法会调用 initLineRect
-      this.initLineRect(pen);
-    } else if (!pen.anchors) {
+    if (!pen.anchors && pen.calculative.worldAnchors) {
       pen.anchors = pen.calculative.worldAnchors.map((pt) => {
         return calcRelativePoint(pt, pen.calculative.worldRect);
       });
@@ -3167,7 +3163,6 @@ export class Canvas {
     if (!playingAnimate) {
       this.setCalculativeByScale(pen);
     }
-
     calcWorldAnchors(pen);
     calcIconRect(this.store.pens, pen);
     calcTextRect(pen);
@@ -3183,7 +3178,6 @@ export class Canvas {
         child && this.updatePenRect(child, { worldRectIsReady: false });
       });
     }
-
     pen.type && this.initLineRect(pen);
   }
 
@@ -3354,6 +3348,9 @@ export class Canvas {
           this.store.hover.anchorBackground ||
           this.store.options.anchorBackground;
         anchors.forEach((anchor) => {
+          if (anchor.hidden && anchor.locked > LockState.DisableEdit) {
+            return;
+          }
           if (anchor === this.store.hoverAnchor) {
             ctx.save();
             const hoverAnchorColor =
