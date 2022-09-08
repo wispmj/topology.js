@@ -115,16 +115,17 @@ class StandardOperation {
         if (flipAxis == "x") {
             this.flipX = !this.flipX;
             this.hasMirror = !this.hasMirror;
-            this.currentMatrix[2] = -1 * this.currentMatrix[2];
-            this.currentMatrix[4] = -1 * this.currentMatrix[4];
+            this.currentMatrix[1] = -1 * this.currentMatrix[1];
+            this.currentMatrix[3] = -1 * this.currentMatrix[3];
         }
         else if (flipAxis == "y") {
             this.flipY = !this.flipY;
             this.hasMirror = !this.hasMirror;
-            this.currentMatrix[1] = -1 * this.currentMatrix[1];
-            this.currentMatrix[3] = -1 * this.currentMatrix[3];
+            this.currentMatrix[0] = -1 * this.currentMatrix[0];
+            this.currentMatrix[2] = -1 * this.currentMatrix[2];
         }
 
+        return;
         //if has rotate，revert rotate by rotate current angle
         var currentAngle = this.angle;
         if (currentAngle) {
