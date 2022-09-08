@@ -112,13 +112,13 @@ class StandardOperation {
             return;
         }
 
-        if (flipAxis == "x") {
+        if (flipAxis == "y") {
             this.flipX = !this.flipX;
             this.hasMirror = !this.hasMirror;
             this.currentMatrix[1] = -1 * this.currentMatrix[1];
             this.currentMatrix[3] = -1 * this.currentMatrix[3];
         }
-        else if (flipAxis == "y") {
+        else if (flipAxis == "x") {
             this.flipY = !this.flipY;
             this.hasMirror = !this.hasMirror;
             this.currentMatrix[0] = -1 * this.currentMatrix[0];
