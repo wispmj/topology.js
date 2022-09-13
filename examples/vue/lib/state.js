@@ -1,5 +1,5 @@
-function utils() { }
-utils.multiplyMatrix = function (a, b) {
+function utils() {}
+utils.multiplyMatrix = function(a, b) {
     // Matrix multiply a * b
     return [
         a[0] * b[0] + a[2] * b[1],
@@ -11,11 +11,11 @@ utils.multiplyMatrix = function (a, b) {
     ];
 }
 
-utils.degreesToRadians = function (degrees) {
+utils.degreesToRadians = function(degrees) {
     return degrees * Math.PI / 180;
 }
 
-utils.radiansToDegrees = function (radians) {
+utils.radiansToDegrees = function(radians) {
     return radians / Math.PI * 180;
 }
 
@@ -117,8 +117,7 @@ class StandardOperation {
             this.hasMirror = !this.hasMirror;
             this.currentMatrix[1] = -1 * this.currentMatrix[1];
             this.currentMatrix[3] = -1 * this.currentMatrix[3];
-        }
-        else if (flipAxis == "y") {
+        } else if (flipAxis == "y") {
             this.flipY = !this.flipY;
             this.hasMirror = !this.hasMirror;
             this.currentMatrix[0] = -1 * this.currentMatrix[0];
@@ -160,6 +159,24 @@ class StandardOperation {
 
     addScale(scaleX, scaleY) {
 
+    }
+
+    setContext(ctx) {
+        var matrix = this.toMatrix();
+        ctx.setTransform(
+            matrix[0],
+            matrix[1],
+            matrix[2],
+            matrix[3],
+            matrix[4],
+            matrix[5]
+        );
+    }
+
+    addState(state) {
+        this.currentMatrix = utils.multiplyMatrix(this.toMatrix(), state.toMatrix());
+        this.hasMirror = this.hasMirror ^ state.hasMirror;
+        return this;
     }
 
     calcRotateMatrix(opr) {
