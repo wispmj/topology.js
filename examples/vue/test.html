@@ -191,14 +191,18 @@
 
             //组合图形
             var stateParent = new StandardOperation();
+            stateParent.addTranslate(100, 0);
             stateParent.addTranslate(origin.x, origin.y);
             // stateParent.addFlip("x");
-            // state.addFlip("y");
-            stateParent.addRotate(angle);
-            stateParent.addFlip("x");
             // stateParent.addFlip("y");
-            stateParent.addScale(2, 2);
+            // stateParent.addScale(1, -1);
+            stateParent.addRotate(angle);
+            // stateParent.addFlip("x");
+            // stateParent.addFlip("y");
+            // stateParent.addScale(1, -1);
             stateParent.addTranslate(-origin.x, -origin.y);
+            // stateParent.addTranslate(100, 0);
+
             // stateParent.addTranslate(-rect.cx, -rect.cy);
 
             //子图形的zx
@@ -206,7 +210,7 @@
             stateChild.addTranslate(rect.cx, rect.cy);
             // stateChild.addFlip("x");
             // stateChild.addFlip("y");
-            stateChild.addRotate(angle);
+            // stateChild.addRotate(angle);
             // stateChild.addFlip("x");
             // stateChild.addFlip("y");
             stateChild.addTranslate(-rect.cx, -rect.cy);
@@ -226,13 +230,49 @@
             // ctx.rect(rect.x, rect.y, rect.width, rect.height);
 
             ctx.stroke();
+        }
 
 
+        function draw7(origin, rect, angle) {
+            var stateChild = new StandardOperation();
+            stateChild.addTranslate(100, 0);
+            stateChild.addTranslate(rect.cx, rect.cy);
+            // stateChild.addFlip("x");
+            // stateChild.addFlip("y");
+            stateChild.addRotate(angle);
+            // stateChild.addFlip("x");
+            // stateChild.addFlip("y");
+            stateChild.addTranslate(-rect.cx, -rect.cy);
+            // stateChild.addTranslate(100, 0);
 
-
+            // ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            stateChild.setContext(ctx);
+            ctx.stroke();
+            // ctx.strokeStyle = "green";
+            ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            ctx.stroke();
 
         }
 
+        function draw8(origin, rect, angle) {
+            var stateChild = new StandardOperation();
+            stateChild.addTranslate(rect.cx, rect.cy);
+            // stateChild.addFlip("x");
+            // stateChild.addFlip("y");
+            stateChild.addRotate(angle);
+            // stateChild.addFlip("x");
+            // stateChild.addFlip("y");
+            stateChild.addTranslate(-rect.cx, -rect.cy);
+            // stateChild.addTranslate(100, 0);
+
+            // ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            stateChild.setContext(ctx);
+            ctx.stroke();
+            // ctx.strokeStyle = "green";
+            ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            ctx.stroke();
+
+        }
 
         function drawPoint(x, y, c) {
             ctx.strokeStyle = c || "black";
@@ -250,7 +290,9 @@
 
         // draw4(o2, rect2);
         // draw5(o2, rect2, rotateAngle);
-        draw6(o2, rect2, rotateAngle);
+        // draw6(o2, rect2, rotateAngle);
+        draw7(o2, rect2, rotateAngle);
+        draw8(o2, rect2, rotateAngle);
 
         function origin_matrix() {
             return [1, 0, 0, 1, 0, 0];

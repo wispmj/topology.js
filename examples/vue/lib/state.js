@@ -188,6 +188,9 @@ class StandardOperation {
 
     addScale(scaleX, scaleY) {
         var sacaleMatrix = [scaleX, 0, 0, scaleY, 0, 0];
+        if ((scaleX < 0) ^ (scaleY < 0)) {
+            this.hasMirror = !this.hasMirror;
+        }
         this.addMatrix(sacaleMatrix);
     }
 
