@@ -44,7 +44,7 @@ class StandardOperation {
         this.originalX = 0;
         this.originalY = 0;
         this.currentMatrix = [1, 0, 0, 1, 0, 0];
-
+        this.currentAngle = 0;
         this.hasMirror = false;
     }
 
@@ -100,6 +100,12 @@ class StandardOperation {
             deltaAngle = -deltaAngle;
         }
 
+        this.currentAngle += deltaAngle;
+        this.addRotateMatrix(deltaAngle);
+    }
+
+
+    addRotateMatrix(deltaAngle) {
         var radian = utils.degreesToRadians(deltaAngle),
             cos = Math.cos(radian),
             sin = Math.sin(radian);
@@ -108,6 +114,29 @@ class StandardOperation {
     }
 
     addFlip(flipAxis, point) {
+        if (!flipAxis) {
+            return;
+        }
+        var scaleMatrix = [];
+        if (flipAxis == "x") {
+            this.flipX = !this.flipX;
+            this.hasMirror = !this.hasMirror;
+            scaleMatrix = [-1, 0, 0, 1, 0, 0];
+        } else if (flipAxis == "y") {
+            this.flipY = !this.flipY;
+            this.hasMirror = !this.hasMirror;
+            scaleMatrix = [1, 0, 0, -1, 0, 0];
+        }
+
+        //先角度归零
+        this.addRotateMatrix(-this.currentAngle);
+        this.addMatrix(scaleMatrix);
+        this.addRotateMatrix(this.currentAngle);
+
+        return;
+    }
+
+    addFlip1(flipAxis, point) {
         if (!flipAxis) {
             return;
         }
@@ -158,7 +187,8 @@ class StandardOperation {
     }
 
     addScale(scaleX, scaleY) {
-
+        var sacaleMatrix = [scaleX, 0, 0, scaleY, 0, 0];
+        this.addMatrix(sacaleMatrix);
     }
 
     setContext(ctx) {

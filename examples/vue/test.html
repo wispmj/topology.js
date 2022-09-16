@@ -187,7 +187,7 @@
         function draw6(origin, rect, angle) {
             ctx.restore();
             ctx.beginPath();
-            ctx.strokeStyle = "blue";
+            ctx.strokeStyle = "red";
 
             //组合图形
             var stateParent = new StandardOperation();
@@ -195,8 +195,9 @@
             // stateParent.addFlip("x");
             // state.addFlip("y");
             stateParent.addRotate(angle);
-            // stateParent.addFlip("x");
-            stateParent.addFlip("y");
+            stateParent.addFlip("x");
+            // stateParent.addFlip("y");
+            stateParent.addScale(2, 2);
             stateParent.addTranslate(-origin.x, -origin.y);
             // stateParent.addTranslate(-rect.cx, -rect.cy);
 
@@ -214,8 +215,9 @@
             ctx.rect(rect.x, rect.y, rect.width, rect.height);
 
             stateParent.addState(stateChild).setContext(ctx);
-
-            // ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            ctx.stroke();
+            // ctx.strokeStyle = "green";
+            ctx.rect(rect.x, rect.y, rect.width, rect.height);
 
 
             // stateChild.setContext(ctx);
