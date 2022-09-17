@@ -1,19 +1,15 @@
 <!DOCTYPE html>
 <html>
-  <head>
+
+<head>
     <meta charset="utf-8" />
     <title>测试1</title>
     <script type="text/javascript" src="./lib/fabric.js"></script>
     <script type="text/javascript" src="./lib/state.js"></script>
-  </head>
+</head>
 
-  <body>
-    <canvas
-      id="myCanvas"
-      width="1800"
-      height="1800"
-      style="border: 1px solid #d3d3d3; margin: 50px"
-    >
+<body>
+    <canvas id="myCanvas" width="1800" height="1800" style="border: 1px solid #d3d3d3; margin: 50px">
       您的浏览器不支持 HTML5 canvas 标签。
     </canvas>
     <script>
@@ -259,20 +255,21 @@
         return matrix;
       }
 
-      // scale(a,d)对应transform(a,0,0,d,0,0);
-      function calcScale(scaleX, scaleY) {
-        scaleX = typeof scaleX === "undefined" ? 1 : scaleX;
-        scaleY = typeof scaleY === "undefined" ? 1 : scaleY;
-        return [scaleX, 0, 0, scaleY, 0, 0];
-      }
+        // scale(a,d)对应transform(a,0,0,d,0,0);
+        function calcScale(scaleX, scaleY) {
+            scaleX = typeof scaleX === "undefined" ? 1 : scaleX;
+            scaleY = typeof scaleY === "undefined" ? 1 : scaleY;
+            return [scaleX, 0, 0, scaleY, 0, 0];
+        }
 
-      function calcFlipX(flipX, x0) {
-        return null;
-      }
+        function calcFlipX(flipX, x0) {
+            return null;
+        }
 
       function calcFlip(flipX, flipY) {
         return [flipX ? 1 : -1, 0, 0, flipY ? 1 : -1, 0, 0];
       }
     </script>
-  </body>
+</body>
+
 </html>
