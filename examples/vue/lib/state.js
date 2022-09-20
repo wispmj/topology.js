@@ -46,6 +46,7 @@ class StandardOperation {
         this.currentMatrix = [1, 0, 0, 1, 0, 0];
         this.currentAngle = 0;
         this.hasMirror = false;
+
     }
 
 
@@ -123,8 +124,7 @@ class StandardOperation {
             this.hasMirror = !this.hasMirror;
             this.currentMatrix[1] = -1 * this.currentMatrix[1];
             this.currentMatrix[3] = -1 * this.currentMatrix[3];
-        }
-        else if (flipAxis == "y") {
+        } else if (flipAxis == "y") {
             this.flipY = !this.flipY;
             this.hasMirror = !this.hasMirror;
             this.currentMatrix[0] = -1 * this.currentMatrix[0];
