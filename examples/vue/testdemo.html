@@ -68,26 +68,26 @@
         var group = {
             topleft: o1,
             center: o2,
-            x: topleft.x,
-            y: topleft.y,
-            cx: center.x,
-            cy: center.y
+            x: o1.x,
+            y: o1.y,
+            cx: o2.x,
+            cy: o2.y
         }
 
         $(document).ready(function() {
 
             var curTarget = origin;
-            origin.state = new StandardOperation();
+            origin.state = new CanvasState();
 
-            var stateParent = new StandardOperation();
+            var stateParent = new CanvasState();
             stateParent.id = "group";
             group.state = stateParent;
 
-            var stateChild1 = new StandardOperation();
+            var stateChild1 = new CanvasState();
             stateChild1.id = "child1";
             rect1.state = stateChild1;
 
-            var stateChild2 = new StandardOperation();
+            var stateChild2 = new CanvasState();
             stateChild2.id = "child2";
             rect2.state = stateChild2;
 
@@ -125,10 +125,12 @@
                     case "S":
                         var sx = parseFloat($(e.target).prev("input").prev("input").val());
                         var sy = parseFloat($(e.target).prev("input").val());
-                        translate(curTarget, sx, sy);
+                        scale(curTarget, sx, sy);
                         break;
                 }
 
+
+                render();
             });
 
             function translate(target, tx, ty) {
@@ -139,44 +141,56 @@
                 state.addTranslate(tx, ty);
             }
 
-            function rotate(state, angle) {
+            function rotate(target, angle) {
 
                 var state = target.state;
                 console.log(target.id + ",rotate==>  angle:" + angle);
 
+                state.addTranslate(target.cx, target.cy);
                 state.addRotate(angle);
+                state.addTranslate(-target.cx, -target.cy);
             }
 
-            function flip(state, flipDir) {
+            function flip(target, flipDir) {
 
                 var state = target.state;
                 console.log(state.id + ",flip==>  dir:" + flipDir);
 
+                state.addTranslate(target.cx, target.cy);
                 state.addFlip(flipDir);
+                state.addTranslate(-target.cx, -target.cy);
             }
 
-            function scale(state, sx, sy) {
+            function scale(target, sx, sy) {
 
                 var state = target.state;
                 console.log(state.id + ",scale==>  sx:" + sx + ",sy:" + sy);
 
+                state.addTranslate(target.x, target.y);
                 state.addScale(sx, sy);
+                state.addTranslate(-target.x, -target.y);
             }
 
             function render() {
-
                 ctx.restore();
-                ctx.clearRect(0, 0, 1000, 1000);
+                ctx.save();
+                ctx.clearRect(0, 0, 10000, 10000);
 
                 //原始图形
-                draw1();
+                draw1(rect2);
 
-                //坐标变换
-                stateParent.add
-
+                //画矩形
+                drawRect(rect2);
 
             }
 
+            function drawRect(rect) {
+                ctx.beginPath();
+                ctx.strokeStyle = "blue";
+                rect.state.setContext(ctx);
+                ctx.rect(rect.x, rect.y, rect.width, rect.height);
+                ctx.stroke();
+            }
 
         });
     </script>
@@ -261,7 +275,7 @@
             ctx.beginPath();
             ctx.strokeStyle = "blue";
 
-            var state = new StandardOperation();
+            var state = new CanvasState();
             state.addTranslate(origin.x, origin.y);
             state.addFlip("x");
             state.addFlip("y");
@@ -307,11 +321,11 @@
         // draw3(rect2);
 
         // draw4(o2, rect2);
-        draw5(o2, rect2, rotateAngle);
+        // draw5(o2, rect2, rotateAngle);
 
-        function origin_matrix() {
-            return [1, 0, 0, 1, 0, 0];
-        }
+        // function origin_matrix() {
+        //     return [1, 0, 0, 1, 0, 0];
+        // }
     </script>
 </body>
 

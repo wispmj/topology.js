@@ -33,12 +33,11 @@ class CanvasState {
 
         this.originalX = 0;
         this.originalY = 0;
+
         this.currentMatrix = [1, 0, 0, 1, 0, 0];
         this.currentAngle = 0;
         this.hasMirror = false;
-
     }
-
 
     toMatrix() {
         return this.currentMatrix;
@@ -76,6 +75,11 @@ class CanvasState {
         this.toOperation(this.currentMatrix);
     }
 
+    setContext(ctx) {
+        var matrix = this.toMatrix();
+        ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
+    }
+
     addTranslate(translateX, translateY) {
         var translateMatrix = [1, 0, 0, 1, translateX, translateY];
         this.addMatrix(translateMatrix);
@@ -86,12 +90,13 @@ class CanvasState {
             return;
         }
 
-        //如果已翻转，再旋转
+        //如果翻转后导致相对坐标系手性与实际坐标系不一致
         if (this.hasMirror) {
             deltaAngle = -deltaAngle;
         }
 
         this.currentAngle += deltaAngle;
+        //TODO: 防止currentAngle过大，需要堆360取余
         this.rotateAngle(deltaAngle);
     }
 
@@ -103,11 +108,18 @@ class CanvasState {
         this.addMatrix(rotateMatrix);
     }
 
-    addFlip(flipAxis, point) {
+    addFlip(flipAxis) {
         if (!flipAxis) {
             return;
         }
 
+        if (flipAxis == "x") {
+            this.flipX = !this.flipX;
+            this.hasMirror = !this.hasMirror;
+        } else if (flipAxis == "y") {
+            this.flipY = !this.flipY;
+            this.hasMirror = !this.hasMirror;
+        }
         //if has rotate，revert rotate by rotate current angle
         if (this.currentAnglerrentAngle) {
             this.rotateAngle(-this.currentAnglerrentAngle);
@@ -131,10 +143,10 @@ class CanvasState {
 
     addScale(scaleX, scaleY) {
         var scaleMatrix = [
-            flipAxis == scaleX,
+            scaleX,
             0,
             0,
-            flipAxis == scaleY,
+            scaleY,
             0,
             0
         ];

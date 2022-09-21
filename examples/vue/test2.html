@@ -7,11 +7,11 @@
     </title>
 
     <!-- Loading the FabricJS library -->
-    <script type="text/javascript" src="../lib/fabric.js"></script>
+    <script type="text/javascript" src="./lib/fabric.js"></script>
 </head>
 
 <body>
-    <canvas id="canvas" width="600" height="200" style="border:1px solid #000000;">
+    <canvas id="canvas" width="1000" height="1000" style="border:1px solid #000000;">
 	</canvas>
 
     <script>
@@ -97,10 +97,14 @@
             // group3 = new fabric.Group([group2], {
             //     subTargetCheck: true
             // }),
+
+
             target;
 
         canvas.add(group1);
+        canvas.add(rect);
 
+        // canvas.add(circle);
 
         // Render the Textbox on Canvas
         // canvas.add(rect, circle);
