@@ -21,16 +21,6 @@ utils.radiansToDegrees = function(radians) {
 
 
 class CanvasState {
-    constructor() {
-
-    }
-
-
-
-
-}
-
-class StandardOperation {
     static originalMatrix = [1, 0, 0, 1, 0, 0];
     constructor() {
         this.translateX = 0;
@@ -102,11 +92,10 @@ class StandardOperation {
         }
 
         this.currentAngle += deltaAngle;
-        this.addRotateMatrix(deltaAngle);
+        this.rotateAngle(deltaAngle);
     }
 
-
-    addRotateMatrix(deltaAngle) {
+    rotateAngle(deltaAngle) {
         var radian = utils.degreesToRadians(deltaAngle),
             cos = Math.cos(radian),
             sin = Math.sin(radian);
@@ -119,28 +108,9 @@ class StandardOperation {
             return;
         }
 
-        if (flipAxis == "x") {
-            this.flipX = !this.flipX;
-            this.hasMirror = !this.hasMirror;
-            this.currentMatrix[1] = -1 * this.currentMatrix[1];
-            this.currentMatrix[3] = -1 * this.currentMatrix[3];
-        } else if (flipAxis == "y") {
-            this.flipY = !this.flipY;
-            this.hasMirror = !this.hasMirror;
-            this.currentMatrix[0] = -1 * this.currentMatrix[0];
-            this.currentMatrix[2] = -1 * this.currentMatrix[2];
-        }
-
-        return;
         //if has rotate，revert rotate by rotate current angle
-        var currentAngle = this.angle;
-        if (currentAngle) {
-            var deltaAngle = -currentAngle;
-            var radian = utils.degreesToRadians(deltaAngle),
-                cos = Math.cos(radian),
-                sin = Math.sin(radian);
-            var rotateMatrix = [cos, sin, -sin, cos, 0, 0];
-            this.addMatrix(rotateMatrix);
+        if (this.currentAnglerrentAngle) {
+            this.rotateAngle(-this.currentAnglerrentAngle);
         }
         //then flip on current axis
         flipAxis = flipAxis.toLowerCase();
@@ -153,19 +123,22 @@ class StandardOperation {
             0
         ];
         this.addMatrix(scaleMatrix);
-
-        if (currentAngle) {
-            var deltaAngle = currentAngle;
-            var radian = utils.degreesToRadians(deltaAngle),
-                cos = Math.cos(radian),
-                sin = Math.sin(radian);
-            var rotateMatrix = [cos, sin, -sin, cos, 0, 0];
-            this.addMatrix(rotateMatrix);
+        //rotate back
+        if (this.currentAnglerrentAngle) {
+            this.rotateAngle(this.currentAnglerrentAngle);
         }
     }
 
     addScale(scaleX, scaleY) {
-
+        var scaleMatrix = [
+            flipAxis == scaleX,
+            0,
+            0,
+            flipAxis == scaleY,
+            0,
+            0
+        ];
+        this.addMatrix(scaleMatrix);
     }
 
     calcRotateMatrix(opr) {
