@@ -232,9 +232,11 @@
             ctx.strokeStyle = "blue";
 
             // ctx.scale(2, 1);
-            ctx.rotate(30 * Math.PI / 180);
-            ctx.scale(2, 1);
+            // ctx.rotate(30 * Math.PI / 180);
+            // ctx.scale(2, 1);
+            ctx.transform(1, 1, 0, 1, 0, 0);
             ctx.rect(rect.x, rect.y, rect.width, rect.height);
+
             ctx.stroke();
         }
 

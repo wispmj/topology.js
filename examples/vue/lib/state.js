@@ -19,10 +19,74 @@ utils.radiansToDegrees = function(radians) {
     return radians / Math.PI * 180;
 }
 
+/**
+ * 基础canvas对象
+ */
+class CanvasObject {
+    /**
+     * canvas对象的操作状态
+     */
+    CanvasState;
+    constructor() {
+        this.x = 0;
+        this.y = 0;
+        this.width = 0;
+        this.height = 0;
+        this.CanvasState = new CanvasState();
+    }
 
+    /**
+     * canvas对象的边界矩形
+     * @returns {Rect} border rect
+     */
+    getBBox() {
+        return new {
+            x: this.x,
+            y: this.y,
+            width: this.width,
+            height: this.height,
+            cx: this.x + this.width / 2,
+            cy: this.y + this.height / 2,
+            ex: this.x + this.width,
+            ey: this.y + this.height,
+        }
+    }
+}
+
+/**
+ * 矩形
+ */
+class Rect extends CanvasObject {
+    constructor() {
+
+    }
+
+}
+
+/**
+ * 组合
+ */
+class Group extends CanvasObject {
+    constructor() {
+        this.children = [];
+    }
+}
+
+/**
+ * 操作状态
+ */
 class CanvasState {
     static originalMatrix = [1, 0, 0, 1, 0, 0];
-    constructor() {
+
+    /**
+     *  @property {CanvasObject} target
+     */
+    target;
+
+    /**  
+     * @param  {CanvasObject} canvasObject cavas对象
+     */
+    constructor(canvasObject) {
         this.translateX = 0;
         this.translateY = 0;
         this.scaleX = 1;
@@ -37,6 +101,9 @@ class CanvasState {
         this.currentMatrix = [1, 0, 0, 1, 0, 0];
         this.currentAngle = 0;
         this.hasMirror = false;
+        this.target = canvasObject;
+
+        this.operation = new BasicOperation();
     }
 
     toMatrix() {
@@ -59,7 +126,7 @@ class CanvasState {
             scaleX = Math.sqrt(denom),
             scaleY = (a[0] * a[3] - a[2] * a[1]) / scaleX,
             skewX = Math.atan2(a[0] * a[2] + a[1] * a[3], denom);
-        var op = this;
+        var op = this.operation;
         op.angle = radian / Math.PI * 180;
         op.scaleX = scaleX;
         op.scaleY = scaleY;
@@ -96,8 +163,18 @@ class CanvasState {
         }
 
         this.currentAngle += deltaAngle;
-        //TODO: 防止currentAngle过大，需要堆360取余
+        if (this.currentAngle < 0) {
+            this.currentAngle += 360;
+        }
+        this.currentAngle %= 360;
+
+        if (this.scaleX != 1 || this.scaleY != 1) {
+            this.addMatrix([1 / this.scaleX, 0, 0, 1 / this.scaleY, 0, 0]);
+        }
         this.rotateAngle(deltaAngle);
+        if (this.scaleX != 1 || this.scaleY != 1) {
+            this.addMatrix([this.scaleX, 0, 0, this.scaleY, 0, 0]);
+        }
     }
 
     rotateAngle(deltaAngle) {
@@ -142,6 +219,12 @@ class CanvasState {
     }
 
     addScale(scaleX, scaleY) {
+        if (scaleX == 0 || scaleY == 0) {
+            return;
+        }
+
+        this.scaleX *= scaleX;
+        this.scaleY *= scaleY;
         var scaleMatrix = [
             scaleX,
             0,
@@ -185,6 +268,22 @@ class CanvasState {
                 true);
         }
         return scaleMatrix;
+    }
+}
+
+class BasicOperation {
+
+    constructor() {
+        this.translateX = 0;
+        this.translateY = 0;
+        this.scaleX = 1;
+        this.scaleY = 1;
+        this.flipX = false;
+        this.flipY = false;
+        this.angle = 0;
+
+        this.originalX = 0;
+        this.originalY = 0;
     }
 }
 
