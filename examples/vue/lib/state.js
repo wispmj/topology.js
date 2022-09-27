@@ -1,77 +1,3 @@
-function utils() {}
-utils.multiplyMatrix = function(a, b) {
-    // Matrix multiply a * b
-    return [
-        a[0] * b[0] + a[2] * b[1],
-        a[1] * b[0] + a[3] * b[1],
-        a[0] * b[2] + a[2] * b[3],
-        a[1] * b[2] + a[3] * b[3],
-        a[0] * b[4] + a[2] * b[5] + a[4],
-        a[1] * b[4] + a[3] * b[5] + a[5]
-    ];
-}
-
-utils.degreesToRadians = function(degrees) {
-    return degrees * Math.PI / 180;
-}
-
-utils.radiansToDegrees = function(radians) {
-    return radians / Math.PI * 180;
-}
-
-/**
- * 基础canvas对象
- */
-class CanvasObject {
-    /**
-     * canvas对象的操作状态
-     */
-    CanvasState;
-    constructor() {
-        this.x = 0;
-        this.y = 0;
-        this.width = 0;
-        this.height = 0;
-        this.CanvasState = new CanvasState();
-    }
-
-    /**
-     * canvas对象的边界矩形
-     * @returns {Rect} border rect
-     */
-    getBBox() {
-        return new {
-            x: this.x,
-            y: this.y,
-            width: this.width,
-            height: this.height,
-            cx: this.x + this.width / 2,
-            cy: this.y + this.height / 2,
-            ex: this.x + this.width,
-            ey: this.y + this.height,
-        }
-    }
-}
-
-/**
- * 矩形
- */
-class Rect extends CanvasObject {
-    constructor() {
-
-    }
-
-}
-
-/**
- * 组合
- */
-class Group extends CanvasObject {
-    constructor() {
-        this.children = [];
-    }
-}
-
 /**
  * 操作状态
  */
@@ -79,6 +5,7 @@ class CanvasState {
     static originalMatrix = [1, 0, 0, 1, 0, 0];
 
     /**
+     * 图元对象
      *  @property {CanvasObject} target
      */
     target;
@@ -101,7 +28,10 @@ class CanvasState {
         this.currentMatrix = [1, 0, 0, 1, 0, 0];
         this.currentAngle = 0;
         this.hasMirror = false;
-        this.target = canvasObject;
+        if (canvasObject != null) {
+            this.target = canvasObject;
+            this.id = canvasObject.id;
+        }
 
         this.operation = new BasicOperation();
     }
@@ -198,8 +128,8 @@ class CanvasState {
             this.hasMirror = !this.hasMirror;
         }
         //if has rotate，revert rotate by rotate current angle
-        if (this.currentAnglerrentAngle) {
-            this.rotateAngle(-this.currentAnglerrentAngle);
+        if (this.currentAngle) {
+            this.rotateAngle(-this.currentAngle);
         }
         //then flip on current axis
         flipAxis = flipAxis.toLowerCase();
@@ -213,8 +143,8 @@ class CanvasState {
         ];
         this.addMatrix(scaleMatrix);
         //rotate back
-        if (this.currentAnglerrentAngle) {
-            this.rotateAngle(this.currentAnglerrentAngle);
+        if (this.currentAngle) {
+            this.rotateAngle(this.currentAngle);
         }
     }
 

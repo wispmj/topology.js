@@ -5,7 +5,9 @@
     <meta charset="utf-8" />
     <title>测试1</title>
     <script type="text/javascript" src="./lib/fabric.js"></script>
+    <script type="text/javascript" src="./lib/utis.js"></script>
     <script type="text/javascript" src="./lib/state.js"></script>
+    <script type="text/javascript" src="./lib/canvasObject.js"></script>
     <script type="text/javascript" src="./lib//jquery-3.6.1.min.js"></script>
     <style type="text/css">
         .contoller {
@@ -27,7 +29,7 @@
         }
     </style>
     <script type="text/javascript">
-        var rect1 = {
+        var rect1 = new Rect("rect1", {
             x: 200,
             y: 200,
             ex: 300,
@@ -36,9 +38,9 @@
             height: 300,
             cx: 250,
             cy: 350,
-        };
+        });
 
-        var rect2 = {
+        var rect2 = new Rect("rect2", {
             x: 400,
             y: 400,
             ex: 500,
@@ -47,7 +49,7 @@
             height: 300,
             cx: 450,
             cy: 550,
-        };
+        });
 
         var o1 = {
             x: 200,
@@ -83,14 +85,6 @@
             stateParent.id = "group";
             group.state = stateParent;
 
-            var stateChild1 = new CanvasState();
-            stateChild1.id = "child1";
-            rect1.state = stateChild1;
-
-            var stateChild2 = new CanvasState();
-            stateChild2.id = "child2";
-            rect2.state = stateChild2;
-
             var c = document.getElementById("myCanvas");
             var ctx = c.getContext("2d");
 
@@ -109,67 +103,29 @@
                     case "T":
                         var tx = parseFloat($(e.target).prev("input").prev("input").val());
                         var ty = parseFloat($(e.target).prev("input").val());
-                        translate(curTarget, tx, ty);
+                        curTarget.translate(tx, ty);
                         break;
 
                     case "R":
                         var angle = parseFloat($(e.target).prev("input").val());
-                        rotate(curTarget, angle);
+                        curTarget.rotate(angle);
                         break;
 
                     case "F":
                         var dir = $(e.target).prev("select").val()
-                        flip(curTarget, dir);
+                        curTarget.flip(dir);
                         break;
 
                     case "S":
                         var sx = parseFloat($(e.target).prev("input").prev("input").val());
                         var sy = parseFloat($(e.target).prev("input").val());
-                        scale(curTarget, sx, sy);
+                        curTarget.scale(sx, sy);
                         break;
                 }
 
 
                 render();
             });
-
-            function translate(target, tx, ty) {
-
-                var state = target.state;
-                console.log(state.id + ",translate==>  tx:" + tx + ",ty:" + ty);
-
-                state.addTranslate(tx, ty);
-            }
-
-            function rotate(target, angle) {
-
-                var state = target.state;
-                console.log(target.id + ",rotate==>  angle:" + angle);
-
-                state.addTranslate(target.cx, target.cy);
-                state.addRotate(angle);
-                state.addTranslate(-target.cx, -target.cy);
-            }
-
-            function flip(target, flipDir) {
-
-                var state = target.state;
-                console.log(state.id + ",flip==>  dir:" + flipDir);
-
-                state.addTranslate(target.cx, target.cy);
-                state.addFlip(flipDir);
-                state.addTranslate(-target.cx, -target.cy);
-            }
-
-            function scale(target, sx, sy) {
-
-                var state = target.state;
-                console.log(state.id + ",scale==>  sx:" + sx + ",sy:" + sy);
-
-                state.addTranslate(target.x, target.y);
-                state.addScale(sx, sy);
-                state.addTranslate(-target.x, -target.y);
-            }
 
             function render() {
                 ctx.restore();
@@ -187,7 +143,7 @@
             function drawRect(rect) {
                 ctx.beginPath();
                 ctx.strokeStyle = "blue";
-                rect.state.setContext(ctx);
+                rect.setContext(ctx);
                 ctx.rect(rect.x, rect.y, rect.width, rect.height);
                 ctx.stroke();
             }
