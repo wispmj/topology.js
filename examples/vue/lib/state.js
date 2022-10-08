@@ -28,6 +28,8 @@ class CanvasState {
         this.currentMatrix = [1, 0, 0, 1, 0, 0];
         this.currentAngle = 0;
         this.hasMirror = false;
+        this.hasMirrorX = false;
+        this.hasMirrorY = false;
         if (canvasObject != null) {
             this.target = canvasObject;
             this.id = canvasObject.id;
@@ -64,6 +66,9 @@ class CanvasState {
         op.skewY = 0;
         op.translateX = a[4];
         op.translateY = a[5];
+
+        this.hasMirrorX = (a[0] + a[4]) < 0; //x轴已翻转
+        this.hasMirrorY = (a[1] + a[3] + a[5]) < 0;
     }
 
     addMatrix(matrix) {

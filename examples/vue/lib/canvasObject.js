@@ -56,6 +56,7 @@ class CanvasObject {
      * @returns {Rect} border rect
      */
     getBBox() {
+
         // return new {
         //     x: this.x,
         //     y: this.y,
@@ -76,8 +77,16 @@ class CanvasObject {
     }
 
     translateForProperty(tx, ty) {
+        console.log(this.id + ",translate==>  tx:" + tx + ",ty:" + ty + ",change proerty");
+        // if(this.canvasState.hasMirror){
+
+        // }
+        // else{
+
+        // }
         this.x += tx;
         this.y += ty;
+        this.caclRect();
     }
 
     rotateByPoint(angle, point) {
@@ -124,11 +133,63 @@ class CanvasObject {
 }
 
 /**
+ * 边框矩形
+ */
+class BorderRect {
+    /**
+     * CanvasObject的构造方法
+     * @param {string} id 对象的ID
+     * @param {{x:number,y:number,width:number,height:number}} rect 对象边框
+     */
+    constructor(rect) {
+        this.x = rect.x;
+        this.y = rect.y;
+        this.top = this.y;
+        this.left = this.x;
+        this.width = rect.width;
+        this.height = rect.height;
+        this.caclRect();
+    }
+
+    caclRect() {
+
+        this.cx = this.x + this.width / 2;
+        this.cy = this.y + this.height / 2;
+        this.ex = this.x + this.width;
+        this.ey = this.y + this.height;
+
+        this.borderRect = {
+            x: this.x,
+            y: this.y,
+            ex: this.ex,
+            ey: this.ey,
+            width: this.width,
+            height: this.height,
+            cx: this.cx,
+            cy: this.cy,
+        };
+    }
+
+}
+
+/**
  * 矩形
  */
 class Rect extends CanvasObject {
     constructor(id, rect) {
         super(id, rect);
+    }
+
+    scale(sx, sy) {
+        console.log(this.id + ",scale(Rect)==>  sx:" + sx + ",sy:" + sy);
+
+        var state = this.canvasState;
+        this.width *= sx;
+        this.height *= sy;
+        this.caclRect();
+        // state.addTranslate(this.x, this.y);
+        // state.addScale(sx, sy);
+        // state.addTranslate(-this.x, -this.y);
     }
 
 }
