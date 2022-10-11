@@ -18,3 +18,18 @@ utils.degreesToRadians = function(degrees) {
 utils.radiansToDegrees = function(radians) {
     return radians / Math.PI * 180;
 }
+
+/**
+ * Invert transformation t
+ * @memberOf fabric.util
+ * @param {Array} t The transform
+ * @return {Array} The inverted transform
+ */
+utils.invertTransform = function(t) {
+    var a = 1 / (t[0] * t[3] - t[1] * t[2]),
+        r = [a * t[3], -a * t[1], -a * t[2], a * t[0]],
+        o = fabric.util.transformPoint({ x: t[4], y: t[5] }, r, true);
+    r[4] = -o.x;
+    r[5] = -o.y;
+    return r;
+}

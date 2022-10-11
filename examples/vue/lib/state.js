@@ -35,6 +35,8 @@ class CanvasState {
             this.id = canvasObject.id;
         }
 
+
+
         this.operation = new BasicOperation();
     }
 
@@ -82,42 +84,32 @@ class CanvasState {
         ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
     }
 
+    /**
+     * 平移
+     * @param {number} translateX 水平方向平移
+     * @param {number} translateY 垂直方向平移
+     */
     addTranslate(translateX, translateY) {
-        var translateMatrix = [1, 0, 0, 1, translateX, translateY];
-        this.addMatrix(translateMatrix);
+        if (translateX != 0) {
+            this.translateX += (this.flipX ? -translateX : translateX);
+        }
+
+        if (translateY != 0) {
+            this.translateY += (this.flipY ? -translateY : translateY);
+        }
     }
 
+    /**
+     * 旋转
+     * @param {number} deltaAngle 旋转角度
+     */
     addRotate(deltaAngle) {
         if (!deltaAngle) {
             return;
         }
 
         //如果翻转后导致相对坐标系手性与实际坐标系不一致
-        if (this.hasMirror) {
-            deltaAngle = -deltaAngle;
-        }
-
-        this.currentAngle += deltaAngle;
-        if (this.currentAngle < 0) {
-            this.currentAngle += 360;
-        }
-        this.currentAngle %= 360;
-
-        if (this.scaleX != 1 || this.scaleY != 1) {
-            this.addMatrix([1 / this.scaleX, 0, 0, 1 / this.scaleY, 0, 0]);
-        }
-        this.rotateAngle(deltaAngle);
-        if (this.scaleX != 1 || this.scaleY != 1) {
-            this.addMatrix([this.scaleX, 0, 0, this.scaleY, 0, 0]);
-        }
-    }
-
-    rotateAngle(deltaAngle) {
-        var radian = utils.degreesToRadians(deltaAngle),
-            cos = Math.cos(radian),
-            sin = Math.sin(radian);
-        var rotateMatrix = [cos, sin, -sin, cos, 0, 0];
-        this.addMatrix(rotateMatrix);
+        this.currentAngle += (this.hasMirror ? -deltaAngle : deltaAngle);
     }
 
     addFlip(flipAxis) {
@@ -125,31 +117,14 @@ class CanvasState {
             return;
         }
 
+        flipAxis = flipAxis.toLowerCase();
+
         if (flipAxis == "x") {
             this.flipX = !this.flipX;
             this.hasMirror = !this.hasMirror;
         } else if (flipAxis == "y") {
             this.flipY = !this.flipY;
             this.hasMirror = !this.hasMirror;
-        }
-        //if has rotate，revert rotate by rotate current angle
-        if (this.currentAngle) {
-            this.rotateAngle(-this.currentAngle);
-        }
-        //then flip on current axis
-        flipAxis = flipAxis.toLowerCase();
-        var scaleMatrix = [
-            flipAxis == "x" ? -1 : 1,
-            0,
-            0,
-            flipAxis == "y" ? -1 : 1,
-            0,
-            0
-        ];
-        this.addMatrix(scaleMatrix);
-        //rotate back
-        if (this.currentAngle) {
-            this.rotateAngle(this.currentAngle);
         }
     }
 
@@ -160,15 +135,6 @@ class CanvasState {
 
         this.scaleX *= scaleX;
         this.scaleY *= scaleY;
-        var scaleMatrix = [
-            scaleX,
-            0,
-            0,
-            scaleY,
-            0,
-            0
-        ];
-        this.addMatrix(scaleMatrix);
     }
 
     calcRotateMatrix(opr) {
@@ -255,6 +221,22 @@ class TransformMatrix {
     }
 }
 
+/**
+ * 向量
+ */
+class Vector {
+
+    /**
+     * 向量初始化
+     * @param {number} x 
+     * @param {number} y 
+     */
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+}
+
 class Point {
     constructor(x, y) {
         this.x = x;
@@ -272,5 +254,6 @@ class Action {
     original;
     x;
     y;
+    angle;
 
 }
