@@ -92,10 +92,6 @@
             var curTarget = origin;
             origin.state = new CanvasState();
 
-            var stateParent = new CanvasState();
-            stateParent.id = "group";
-            group.state = stateParent;
-
             var c = document.getElementById("myCanvas");
             var ctx = c.getContext("2d");
 
@@ -114,8 +110,7 @@
                     case "T":
                         var tx = parseFloat($(e.target).prev("input").prev("input").val());
                         var ty = parseFloat($(e.target).prev("input").val());
-                        // curTarget.translate(tx, ty);
-                        curTarget.translateForProperty(tx, ty);
+                        curTarget.translate(tx, ty);
                         break;
 
                     case "R":
@@ -140,24 +135,18 @@
             });
 
             function render() {
-                ctx.restore();
                 ctx.save();
+                ctx.setTransform();
                 ctx.clearRect(0, 0, 10000, 10000);
 
                 //原始图形
                 draw1(rect3);
 
                 //画矩形
-                drawRect(rect2);
+                rect2.render(ctx);
 
-            }
+                ctx.restore();
 
-            function drawRect(rect) {
-                ctx.beginPath();
-                ctx.strokeStyle = "blue";
-                rect.setContext(ctx);
-                ctx.rect(rect.x, rect.y, rect.width, rect.height);
-                ctx.stroke();
             }
 
         });
@@ -215,6 +204,7 @@
         var ctx = c.getContext("2d");
 
         function draw1(rect) {
+            ctx.save();
             // 红色矩形
             ctx.beginPath();
             ctx.strokeStyle = "blue";
@@ -233,13 +223,13 @@
             ctx.moveTo(rect.cx, 0);
             ctx.lineTo(rect.cx, rect.y * 2 + rect.height);
             ctx.stroke();
+            ctx.restore();
 
         }
 
 
         //举行rect围绕origin旋转angle
         function draw5(origin, rect, angle) {
-            ctx.restore();
             ctx.beginPath();
             ctx.strokeStyle = "blue";
 

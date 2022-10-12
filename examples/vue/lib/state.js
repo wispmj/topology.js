@@ -26,7 +26,6 @@ class CanvasState {
         this.originalY = 0;
 
         this.currentMatrix = [1, 0, 0, 1, 0, 0];
-        this.currentAngle = 0;
         this.hasMirror = false;
         this.hasMirrorX = false;
         this.hasMirrorY = false;
@@ -35,13 +34,11 @@ class CanvasState {
             this.id = canvasObject.id;
         }
 
-
-
         this.operation = new BasicOperation();
     }
 
     toMatrix() {
-        return this.currentMatrix;
+        // return this.currentMatrix;
         var matrix = [1, 0, 0, 1, this.translateX || 0, this.translateY || 0];
         if (this.angle) {
             matrix = utils.multiplyMatrix(matrix, this.calcRotateMatrix(this));
@@ -109,7 +106,7 @@ class CanvasState {
         }
 
         //如果翻转后导致相对坐标系手性与实际坐标系不一致
-        this.currentAngle += (this.hasMirror ? -deltaAngle : deltaAngle);
+        this.angle += (this.hasMirror ? -deltaAngle : deltaAngle);
     }
 
     addFlip(flipAxis) {

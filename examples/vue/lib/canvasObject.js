@@ -16,16 +16,18 @@ class CanvasObject {
     /**
      * CanvasObject的构造方法
      * @param {string} id 对象的ID
-     * @param {{x:number,y:number,width:number,height:number}} rect 对象边框
+     * @param {{x:number,y:number,width:number,height:number,borderColor:string,fill,string }} options 对象边框
      */
-    constructor(id, rect) {
+    constructor(id, options) {
         this.id = id;
-        this.x = rect.x;
-        this.y = rect.y;
+        this.x = options.x;
+        this.y = options.y;
         this.top = this.y;
         this.left = this.x;
-        this.width = rect.width;
-        this.height = rect.height;
+        this.width = options.width;
+        this.height = options.height;
+        this.borderColor = options.borderColor;
+        this.fill = options.fill;
 
         this.caclRect();
 
@@ -103,32 +105,44 @@ class CanvasObject {
         console.log(this.id + ",rotate==>  angle:" + angle);
 
         var state = this.canvasState;
-        state.addTranslate(this.cx, this.cy);
+        // state.addTranslate(this.cx, this.cy);
         state.addRotate(angle);
-        state.addTranslate(-this.cx, -this.cy);
+        // state.addTranslate(-this.cx, -this.cy);
     }
 
     flip(flipDir) {
         console.log(this.id + ",flip==>  dir:" + flipDir);
 
         var state = this.canvasState;
-        state.addTranslate(this.cx, this.cy);
+        // state.addTranslate(this.cx, this.cy);
         state.addFlip(flipDir);
-        state.addTranslate(-this.cx, -this.cy);
+        // state.addTranslate(-this.cx, -this.cy);
     }
 
     scale(sx, sy) {
         console.log(this.id + ",scale==>  sx:" + sx + ",sy:" + sy);
 
         var state = this.canvasState;
-        state.addTranslate(this.x, this.y);
+        // state.addTranslate(this.x, this.y);
         state.addScale(sx, sy);
-        state.addTranslate(-this.x, -this.y);
+        // state.addTranslate(-this.x, -this.y);
     }
 
     setContext(ctx) {
         var matrix = this.canvasState.toMatrix();
         ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
+    }
+
+    render(ctx) {
+        ctx.save()
+        this.setContext(ctx);
+
+        this.drawObject(ctx)
+        ctx.restore();
+    }
+
+    drawObject(ctx) {
+
     }
 }
 
@@ -176,20 +190,27 @@ class BorderRect {
  * 矩形
  */
 class Rect extends CanvasObject {
-    constructor(id, rect) {
-        super(id, rect);
+    constructor(id, options) {
+        super(id, options);
     }
 
     scale(sx, sy) {
         console.log(this.id + ",scale(Rect)==>  sx:" + sx + ",sy:" + sy);
 
-        var state = this.canvasState;
         this.width *= sx;
         this.height *= sy;
         this.caclRect();
         // state.addTranslate(this.x, this.y);
         // state.addScale(sx, sy);
         // state.addTranslate(-this.x, -this.y);
+    }
+
+    drawObject(ctx) {
+        ctx.beginPath();
+        ctx.strokeStyle = this.color || "black";
+        this.setContext(ctx);
+        ctx.rect(this.x, this.y, this.width, this.height);
+        ctx.stroke();
     }
 
 }
