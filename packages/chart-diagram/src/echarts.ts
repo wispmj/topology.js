@@ -47,10 +47,7 @@ export function echarts(pen: ChartPen): Path2D {
 
   const path = new Path2D();
   const worldRect = pen.calculative.worldRect;
-  let echarts = echartsList.echarts;
-  if (!echarts && window) {
-    echarts = window['echarts'];
-  }
+  let echarts = echartsList.echarts || globalThis.echarts;
   if (!pen.echarts || !echarts) {
     return;
   }
@@ -58,7 +55,7 @@ export function echarts(pen: ChartPen): Path2D {
   if (typeof pen.echarts === 'string') {
     try {
       pen.echarts = JSON.parse(pen.echarts);
-    } catch {}
+    } catch (e) {}
   }
   if (!pen.echarts) {
     return;
@@ -102,7 +99,7 @@ export function echarts(pen: ChartPen): Path2D {
 
   path.rect(worldRect.x, worldRect.y, worldRect.width, worldRect.height);
 
-  if (pen.calculative.dirty && echartsList[pen.id]) {
+  if (pen.calculative.patchFlags && echartsList[pen.id]) {
     setElemPosition(pen, echartsList[pen.id].div);
   }
   return path;
@@ -110,10 +107,7 @@ export function echarts(pen: ChartPen): Path2D {
 
 function destory(pen: Pen) {
   echartsList[pen.id].div.remove();
-  let echarts = echartsList.echarts;
-  if (!echarts && window) {
-    echarts = window['echarts'];
-  }
+  let echarts = echartsList.echarts || globalThis.echarts;
   echarts && echarts.dispose(echartsList[pen.id].chart);
   echartsList[pen.id] = undefined;
 }
@@ -130,6 +124,7 @@ function resize(pen: Pen) {
     return;
   }
   setElemPosition(pen, echartsList[pen.id].div);
+  // TODO: resize 执行的过于频繁时会消耗性能
   echartsList[pen.id].chart.resize();
 }
 

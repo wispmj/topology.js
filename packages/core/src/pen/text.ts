@@ -1,6 +1,6 @@
 import { Pen } from '.';
 import { Canvas } from '../canvas';
-import { calcExy, Rect } from '../rect';
+import { calcRightBottom, Rect } from '../rect';
 import { getFont } from './render';
 
 export function calcTextRect(pen: Pen) {
@@ -28,6 +28,9 @@ export function calcTextRect(pen: Pen) {
   }
   if (textHeight && textHeight < 1) {
     textHeight *= worldRect.height;
+  }
+  if (textWidth < pen.calculative.fontSize) {
+    textWidth = pen.calculative.fontSize;
   }
   // 默认居左，居上
   x += (textLeft || 0) + worldRect.x;
@@ -59,7 +62,7 @@ export function calcTextRect(pen: Pen) {
     width: textWidth || width,
     height: textHeight || height,
   };
-  calcExy(rect);
+  calcRightBottom(rect);
   pen.calculative.worldTextRect = rect;
 
   calcTextLines(pen);
@@ -100,7 +103,7 @@ export function calcTextDrawRect(ctx: CanvasRenderingContext2D, pen: Pen) {
     width: textWidth,
     height: h,
   };
-  calcExy(pen.calculative.textDrawRect);
+  calcRightBottom(pen.calculative.textDrawRect);
 }
 
 export function calcTextLines(pen: Pen, text = pen.calculative.text) {
@@ -119,10 +122,12 @@ export function calcTextLines(pen: Pen, text = pen.calculative.text) {
     case 'nowrap':
       if (pen.ellipsis !== false) {
         const allLines = wrapLines(text.split(''), pen);
-        lines.push(allLines[0]);
-        if (allLines.length > 1) {
-          // 存在第二行，说明宽度超出
-          setEllipsisOnLastLine(lines);
+        if (allLines[0]) {
+          lines.push(allLines[0]);
+          if (allLines.length > 1) {
+            // 存在第二行，说明宽度超出
+            setEllipsisOnLastLine(lines);
+          }
         }
       } else {
         lines.push(text);
@@ -140,8 +145,13 @@ export function calcTextLines(pen: Pen, text = pen.calculative.text) {
       const paragraphs = text.split(/[\n]/g);
       let currentRow = 0;
       outer: for (const paragraph of paragraphs) {
-        const words = pen.whiteSpace === 'break-all' ? paragraph.split('') : getWords(paragraph);
-        const items = wrapLines(words, pen);
+        const words =
+          pen.whiteSpace === 'break-all'
+            ? paragraph.split('')
+            : getWords(paragraph);
+        let items = wrapLines(words, pen);
+        // 空行换行的情况
+        if (items.length === 0) items = [''];
         if (pen.ellipsis != false) {
           for (const l of items) {
             currentRow++;
@@ -258,7 +268,7 @@ export function calcTextAdaptionWidth(
  * 副作用函数，会修改传入的参数
  * 把最后一行的最后变成 ...
  * TODO: 中文的三个字符宽度比 . 大，显示起来像是删多了
- * @param lines 
+ * @param lines
  */
 function setEllipsisOnLastLine(lines: string[]) {
   lines[lines.length - 1] = lines[lines.length - 1].slice(0, -3) + '...';

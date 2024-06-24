@@ -8,7 +8,7 @@ export const lightningChartsList: {
     chart: any;
   };
 } = {
-  lightningChart: undefined
+  lightningChart: undefined,
 };
 
 export function lightningCharts(pen: Pen): Path2D {
@@ -23,10 +23,7 @@ export function lightningCharts(pen: Pen): Path2D {
 
   const path = new Path2D();
   const worldRect = pen.calculative.worldRect;
-  let lightningChart = lightningChartsList.lightningChart;
-  if (!lightningChart && window) {
-    lightningChart = window['lcjs'];
-  }
+  let lightningChart = lightningChartsList.lightningChart || globalThis.lcjs;
   if (!(pen as any).lightningCharts || !lightningChart) {
     return;
   }
@@ -34,7 +31,7 @@ export function lightningCharts(pen: Pen): Path2D {
   if (typeof (pen as any).lightningCharts === 'string') {
     try {
       (pen as any).lightningCharts = JSON.parse((pen as any).lightningCharts);
-    } catch {}
+    } catch (e) {}
   }
   if (!(pen as any).lightningCharts) {
     return;
@@ -73,7 +70,7 @@ export function lightningCharts(pen: Pen): Path2D {
 
   path.rect(worldRect.x, worldRect.y, worldRect.width, worldRect.height);
 
-  if (pen.calculative.dirty && lightningChartsList[pen.id]) {
+  if (pen.calculative.patchFlags && lightningChartsList[pen.id]) {
     setElemPosition(pen, lightningChartsList[pen.id].div);
   }
 
@@ -324,10 +321,7 @@ function setLightningCharts(pen: Pen) {
 
 function destory(pen: Pen) {
   lightningChartsList[pen.id].div.remove();
-  let lightningChart = lightningChartsList.lightningChart;
-  if (!lightningChart && window) {
-    lightningChart = window['lcjs'];
-  }
+  let lightningChart = lightningChartsList.lightningChart || globalThis.lcjs;
   //   lightningChartsList[pen.id].chart.dispose();
   // lightningCharts && lightningCharts.dispose(lightningChartsList[pen.id].chart);
   lightningChartsList[pen.id] = undefined;

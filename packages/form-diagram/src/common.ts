@@ -1,18 +1,29 @@
 import { Pen } from '../../core/src/pen';
 import { ChartData } from '../../core/src/pen';
 
-import { calcExy, Rect } from '@topology/core';
+import { calcRightBottom, Rect } from '@topology/core';
 
 export interface Pos {
   row: number;
   col: number;
 }
 
+export enum ReplaceMode {
+  Add,
+  Replace,
+  ReplaceAll,
+}
 export interface formPen extends Pen {
-  optionPos?: any[];
+  optionPos?: number[];
   direction?: string;
   checkboxWidth?: number;
-  options?: any[];
+  isForbidden?: boolean;
+  options?: {
+    isForbidden: boolean;
+    isChecked: boolean;
+    background: string;
+    text: string;
+  }[];
   optionHeight?: number;
   checkboxHeight?: number;
   calculative?: {
@@ -22,8 +33,11 @@ export interface formPen extends Pen {
     activeCell: Pos;
     hoverCell: Pos;
     inputCell: Pos;
+    isUpdateData: boolean;
+    isHover: boolean;
+    isInput: boolean;
   } & Pen['calculative'];
-  checked?: boolean;
+  checked?: boolean | string;
   onColor?: string;
   disable?: boolean;
   disableOnColor?: string;
@@ -35,7 +49,7 @@ export interface formPen extends Pen {
   sliderWidth?: number;
   sliderHeight?: number;
   barHeight?: number;
-  value?: number;
+  value?: number | string;
   min?: number;
   max?: number;
   table?: {
@@ -47,13 +61,29 @@ export interface formPen extends Pen {
       height: number;
       fontWeight: number;
     };
-    data: any;
+    data: any[];
   };
   colPos: number[];
   rowPos: number[];
   tableWidth: number;
   tableHeight: number;
   isInit: boolean;
+  rowHeight: number;
+  colWidth: number;
+  styles: {
+    row: number;
+    col: number;
+    color: string;
+    background: string;
+    width: number;
+    height: number;
+    wheres: { comparison: string; key: string; value: string }[];
+    pens: formPen[];
+  }[];
+  data: any;
+  isFirstTime: boolean;
+  replaceMode?: ReplaceMode;
+  timer: NodeJS.Timeout;
 }
 
 export interface cellData extends ChartData {
@@ -91,8 +121,12 @@ export function initOptions(pen: any) {
       y: pen.y,
       height: pen.height,
       width: pen.width,
+      center: {
+        x: pen.x + pen.width / 2,
+        y: pen.y + pen.height / 2,
+      },
     };
-    calcExy(pen.calculative.worldRect);
+    calcRightBottom(pen.calculative.worldRect);
   } else if (pen.direction == 'vertical') {
     if (pen.optionInterval == undefined) {
       pen.optionInterval = 20;
@@ -115,8 +149,12 @@ export function initOptions(pen: any) {
         y: pen.y,
         height: pen.height,
         width: pen.width,
+        center: {
+          x: pen.x + pen.width / 2,
+          y: pen.y + pen.height / 2,
+        },
       };
-      calcExy(pen.calculative.worldRect);
+      calcRightBottom(pen.calculative.worldRect);
     }
   }
 }

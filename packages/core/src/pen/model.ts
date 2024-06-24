@@ -56,7 +56,7 @@ export const needCalcTextRectProps = [
 
 export const needSetPenProps = ['x', 'y', 'width', 'height'];
 
-export const needDirtyPenRectProps = [
+export const needPatchFlagsPenRectProps = [
   'paddingTop',
   'paddingRight',
   'paddingBottom',
@@ -272,6 +272,8 @@ export interface Pen extends Rect {
   flipX?: boolean;
   flipY?: boolean;
 
+  fillTexts?: string[];
+
   hiddenText?: boolean; // 隐藏 text
   keepDecimal?: number; // undefined 显示原内容；0 显示整数
   showChild?: number; // 第几个子元素展示 undefined 即展示全部
@@ -279,6 +281,7 @@ export interface Pen extends Rect {
   isRuleLine?: boolean; // 是否是规则线，规则线不受缩放，平移影响
   isBottom?: boolean; // 是否是底部图片
   form?: FormItem[]; // 业务表单
+  lockedOnCombine?: LockState; // 组合成 combine ，该节点的 locked 值
   // calculative 对象中的值是为了动画存在，表明了渐变过程中，画布上绘制的当前值
   calculative?: {
     x?: number;
@@ -372,7 +375,7 @@ export interface Pen extends Rect {
     isDock?: boolean; // 是否是对齐参考画笔
     pencil?: boolean;
     activeAnchor?: Point;
-    dirty?: boolean;
+    patchFlags?: boolean;
     visible?: boolean; // TODO: visible 是否参与动画呢？
     // 仅仅内部专用
     inView?: boolean;
@@ -423,12 +426,13 @@ export interface Pen extends Rect {
     keepDecimal?: number; // undefined 显示原内容；0 显示整数；保留几位小数
     showChild?: number; // 第几个子元素展示 undefined 即展示全部
     animateDotSize?: number; // 线条原点动画，原点大小
+    zIndex?: number; //dom节点 z-index;
     // media element
     onended?: (pen: Pen) => void;
   };
 
-  // 最后一个动画帧状态数据
-  lastFrame?: Pen;
+  // 前一个动画帧状态数据
+  prevFrame?: Pen;
 
   onAdd?: (pen: Pen) => void;
   onValue?: (pen: Pen) => void;
@@ -447,6 +451,9 @@ export interface Pen extends Rect {
   onInput?: (pen: Pen, text: string) => void;
   onChangeId?: (pen: Pen, oldId: string, newId: string) => void;
   onBinds?: (pen: Pen, values: IValue[], formItem: FormItem) => IValue[];
+  onStartVideo?: (pen: Pen) => void;
+  onPauseVideo?: (pen: Pen) => void;
+  onStopVideo?: (pen: Pen) => void;
 }
 
 // 属性绑定变量
@@ -549,3 +556,26 @@ export const formatAttrs: Set<string> = new Set([
   'hiddenText',
   'keepDecimal',
 ]);
+
+/**
+ * 清空 pen 的 生命周期
+ */
+export function clearLifeCycle(pen: Pen) {
+  pen.onAdd = undefined;
+  pen.onValue = undefined;
+  pen.onBeforeValue = undefined;
+  pen.onDestroy = undefined;
+  pen.onMove = undefined;
+  pen.onResize = undefined;
+  pen.onRotate = undefined;
+  pen.onClick = undefined;
+  pen.onMouseEnter = undefined;
+  pen.onMouseLeave = undefined;
+  pen.onMouseDown = undefined;
+  pen.onMouseMove = undefined;
+  pen.onMouseUp = undefined;
+  pen.onShowInput = undefined;
+  pen.onInput = undefined;
+  pen.onChangeId = undefined;
+  pen.onBinds = undefined;
+}
